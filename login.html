@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="portal.css" />
+  </head>
+  <body class="login-page">
+    <main class="portal-main">
+      <section class="login-layout">
+        <div class="portal-card login-left auth-card">
+          <h1>Project Login</h1>
+          <p class="muted">Use your email and password <strong>123</strong>.</p>
+          <form id="login-form" class="project-form">
+            <label class="field">
+              <span>Email</span>
+              <input id="login-email" type="email" required />
+            </label>
+            <label class="field">
+              <span>Password</span>
+              <input id="login-password" type="password" required value="123" />
+            </label>
+            <div id="login-error" class="csv-status error" aria-live="polite"></div>
+            <div class="actions-row auth-actions">
+              <button class="primary-btn" type="submit">Login</button>
+            </div>
+          </form>
+        </div>
+        <div class="login-right" aria-hidden="true">
+          <img class="login-logo" src="Logo-Vector.png" alt="Pull Path" />
+        </div>
+      </section>
+    </main>
+    <script src="auth.js"></script>
+    <script src="login.js"></script>
+  </body>
+</html>

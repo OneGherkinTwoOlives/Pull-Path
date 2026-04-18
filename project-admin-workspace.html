@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Project Administrator Workspace</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="portal.css" />
+  </head>
+  <body>
+    <main class="portal-main">
+      <section class="portal-card">
+        <div class="workspace-header-row">
+          <h1>Project Administrator Workspace</h1>
+          <button id="logout-btn" class="secondary-btn" type="button">Logout</button>
+        </div>
+        <p id="project-admin-email" class="muted"></p>
+        <h2>Managed Projects</h2>
+        <ul id="project-admin-project-list" class="project-list"></ul>
+        <p id="project-admin-empty" class="muted">No projects are assigned to this administrator.</p>
+      </section>
+    </main>
+    <script src="auth.js"></script>
+    <script src="project-admin-workspace.js"></script>
+  </body>
+</html>

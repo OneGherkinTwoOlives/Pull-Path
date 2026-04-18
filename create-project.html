@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Create Project</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="portal.css" />
+  </head>
+  <body>
+    <main class="portal-main">
+      <section class="portal-card form-card wizard-card">
+        <div class="wizard-progress">
+          <div class="progress-step active" data-page="1">
+            <span class="step-number">1</span>
+            <span class="step-label">Project Team</span>
+          </div>
+          <div class="progress-step" data-page="2">
+            <span class="step-number">2</span>
+            <span class="step-label">Project Details</span>
+          </div>
+        </div>
+
+        <form id="create-project-form" class="wizard-form">
+          <!-- Page 1: Project Team -->
+          <div class="wizard-page active" data-page="1">
+            <h1>Create New Project - Step 1: Project Team</h1>
+            
+            <label class="field">
+              <span>Project Name</span>
+              <input id="project-name-input" type="text" required />
+            </label>
+
+            <fieldset class="field">
+              <legend>Select Disciplines</legend>
+              <div id="discipline-list" class="discipline-grid"></div>
+            </fieldset>
+
+            <section class="field">
+              <label class="field">
+                <span>Project Team</span>
+                <span class="field-hint">Paste email addresses separated by commas</span>
+                <textarea id="team-email-input" class="team-email-input" placeholder="alice@company.com, bob@company.com" rows="3"></textarea>
+              </label>
+              <div id="team-rows" class="team-rows"></div>
+            </section>
+
+            <div class="actions-row">
+              <a id="create-project-back-link" class="secondary-link" href="index.html">Back</a>
+              <button class="primary-btn" type="button" data-action="next-page">Next</button>
+            </div>
+          </div>
+
+          <!-- Page 2: Project Details -->
+          <div class="wizard-page" data-page="2">
+            <h1>Create New Project - Step 2: Project Details</h1>
+
+            <div class="field-row">
+              <label class="field">
+                <span>Start Date</span>
+                <input id="project-start-date" type="date" required />
+              </label>
+              <label class="field">
+                <span>Duration (weeks)</span>
+                <input id="project-duration" type="number" min="1" max="260" value="26" required />
+              </label>
+            </div>
+
+            <section class="field import-field">
+              <div class="field">
+                <span>Optional Task List (CSV)</span>
+                <span class="field-hint">Required columns: Task and Discipline. Optional: Start, Finish, Duration (weeks), Predecessors.</span>
+                <input id="task-csv-input" class="task-csv-input" type="file" accept=".csv,text/csv" hidden />
+                <div class="csv-upload-actions">
+                  <button id="task-csv-select-btn" class="secondary-btn" type="button">Choose File</button>
+                  <button id="task-csv-remove-btn" class="secondary-btn danger-btn" type="button" hidden>Delete File</button>
+                </div>
+                <div id="task-csv-file-name" class="csv-file-name muted">No task file selected.</div>
+              </div>
+              <div id="task-csv-status" class="csv-status" aria-live="polite"></div>
+            </section>
+
+            <section class="field">
+              <legend>Final Deliverables</legend>
+              <div class="deliverable-types">
+                <label class="deliverable-option">
+                  <input type="radio" name="deliverable-type" value="common" checked />
+                  <span>
+                    <strong>Common Deliverable</strong>
+                    <small>All disciplines contribute to a single deliverable</small>
+                  </span>
+                </label>
+                <label class="deliverable-option">
+                  <input type="radio" name="deliverable-type" value="individual" />
+                  <span>
+                    <strong>Individual Deliverables</strong>
+                    <small>Each discipline has its own deliverable or supporting role</small>
+                  </span>
+                </label>
+              </div>
+
+              <!-- Common Deliverable -->
+              <div id="common-deliverable-section" class="deliverable-section">
+                <label class="field">
+                  <span>Deliverable Name</span>
+                  <input id="common-deliverable-name" type="text" placeholder="e.g., Final Design Package" />
+                </label>
+              </div>
+
+              <!-- Individual Deliverables -->
+              <div id="individual-deliverable-section" class="deliverable-section" style="display: none;">
+                <div id="individual-deliverables-list" class="individual-deliverables-list"></div>
+              </div>
+            </section>
+
+            <div class="actions-row">
+              <button class="secondary-btn" type="button" data-action="prev-page">Back</button>
+              <button class="primary-btn" type="submit">Create Project</button>
+            </div>
+          </div>
+        </form>
+      </section>
+    </main>
+    <script src="auth.js"></script>
+    <script src="create-project.js"></script>
+  </body>
+</html>

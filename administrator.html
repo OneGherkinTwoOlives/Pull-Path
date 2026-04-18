@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Administrator Page</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="portal.css" />
+  </head>
+  <body>
+    <main class="portal-main">
+      <section class="portal-card">
+        <div class="workspace-header-row">
+          <h1>Administrator Page</h1>
+          <div class="workspace-actions">
+            <a class="secondary-link action-link" href="index.html">Back to Workspace</a>
+            <button id="logout-btn" class="secondary-btn" type="button">Logout</button>
+          </div>
+        </div>
+
+        <div class="admin-summary-grid">
+          <section class="portal-col">
+            <h2>Site Administration</h2>
+            <p id="super-admin-email" class="muted"></p>
+            <p class="muted">This account controls the website and all project-level administrators.</p>
+          </section>
+          <section class="portal-col">
+            <h2>Portfolio Summary</h2>
+            <div id="admin-stats" class="stats-list"></div>
+          </section>
+        </div>
+
+        <section class="portal-col admin-section-block">
+          <div class="workspace-header-row">
+            <h2>Project Administrators</h2>
+            <button id="create-project-btn" class="primary-btn" type="button">Create New Project</button>
+          </div>
+          <ul id="project-admin-overview" class="project-list"></ul>
+          <p id="project-admin-overview-empty" class="muted">No projects available.</p>
+        </section>
+      </section>
+    </main>
+    <script src="auth.js"></script>
+    <script src="administrator.js"></script>
+  </body>
+</html>

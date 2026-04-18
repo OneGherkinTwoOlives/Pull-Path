@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Timeline Sticky Notes</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;700&family=Permanent+Marker&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css?v=8" />
+  </head>
+  <body>
+    <header class="app-header">
+      <h1 id="project-name" contenteditable="true" spellcheck="false">Timeline Notes Board</h1>
+      <section class="toolbar" aria-label="Board controls">
+        <div class="add-note-wrap prerequisite-wrap">
+          <button id="prerequisite-btn" class="btn btn-prerequisite" type="button" aria-expanded="false">Prerequisites</button>
+          <div id="prerequisite-menu" class="add-note-menu prerequisite-menu" hidden></div>
+        </div>
+        <div class="add-note-wrap">
+          <button id="add-note-btn" class="btn btn-primary" type="button" aria-expanded="false">+ Add Note</button>
+          <div id="add-note-menu" class="add-note-menu" hidden></div>
+        </div>
+        <button id="clear-links-btn" class="btn btn-ghost">Clear Links</button>
+        <button id="save-btn" class="btn btn-primary">💾 Save Board</button>
+        <button id="home-btn" class="btn btn-ghost" type="button">Home</button>
+        <button id="logout-btn" class="btn btn-ghost" type="button">Logout</button>
+        <button id="schedule-toggle-btn" class="btn btn-ghost" type="button" aria-expanded="false">Show Takt Schedule</button>
+        <label class="control-field" for="finish-date-input">
+          <span>Finish Date</span>
+          <input id="finish-date-input" type="date" />
+        </label>
+        <label class="control-field control-checkbox" for="snap-to-week-input">
+          <input id="snap-to-week-input" type="checkbox" />
+          <span>Enable Snapping</span>
+        </label>
+        <label class="control-field control-checkbox" for="collapse-all-lanes-input">
+          <input id="collapse-all-lanes-input" type="checkbox" />
+          <span>Collapse All Swimlanes</span>
+        </label>
+        <label class="control-field control-checkbox" for="show-critical-path-input">
+          <input id="show-critical-path-input" type="checkbox" />
+          <span>Show Critical Path</span>
+        </label>
+        <label class="control-field control-checkbox" for="hide-neutral-links-input">
+          <input id="hide-neutral-links-input" type="checkbox" />
+          <span>Hide Grey Links</span>
+        </label>
+        <label class="control-field control-zoom" for="neutral-link-width-input">
+          <span>Grey Line Thickness</span>
+          <input id="neutral-link-width-input" type="range" min="20" max="100" step="10" value="100" />
+          <span id="neutral-link-width-badge" class="zoom-badge">100%</span>
+        </label>
+        <label class="control-field" for="stage-duration-input">
+          <span>Stage Duration (weeks)</span>
+          <input id="stage-duration-input" type="number" min="1" max="260" step="1" value="26" />
+        </label>
+        <label class="control-field control-zoom" for="zoom-x-input">
+          <span>Horizontal Zoom</span>
+          <input id="zoom-x-input" type="range" min="50" max="500" step="10" value="100" />
+          <span id="zoom-x-badge" class="zoom-badge">100%</span>
+        </label>
+        <label class="control-field control-zoom" for="zoom-y-input">
+          <span>Vertical Zoom</span>
+          <input id="zoom-y-input" type="range" min="50" max="500" step="10" value="100" />
+          <span id="zoom-y-badge" class="zoom-badge">100%</span>
+        </label>
+        <label class="control-field control-zoom" for="note-scale-input">
+          <span>Note Scale</span>
+          <input id="note-scale-input" type="range" min="50" max="200" step="10" value="100" />
+          <span id="note-scale-badge" class="zoom-badge">100%</span>
+        </label>
+        <span id="status" class="status" role="status" aria-live="polite">Ready</span>
+      </section>
+    </header>
+
+    <section id="schedule-panel" class="schedule-panel" hidden>
+      <div class="schedule-panel-inner">
+        <table class="schedule-table">
+          <thead>
+            <tr>
+              <th>Task Name</th>
+              <th>Discipline</th>
+              <th>Start Date</th>
+              <th>End Date</th>
+              <th>Duration</th>
+              <th>Predecessors</th>
+            </tr>
+          </thead>
+          <tbody id="schedule-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <main>
+      <div id="board-viewport" class="board-viewport">
+        <div id="board" class="board" aria-label="Timeline notes board">
+          <div id="swim-lanes-layer" class="swim-lanes-layer" aria-hidden="true"></div>
+          <div id="timeline-grid" class="timeline-grid" aria-hidden="true"></div>
+          <div id="stage-start-line" class="stage-line stage-line-start"></div>
+          <div id="stage-finish-line" class="stage-line stage-line-finish"></div>
+          <div class="timeline-layer" aria-hidden="true">
+            <div class="timeline-axis"></div>
+            <div id="timeline-ticks" class="timeline-ticks"></div>
+            <svg id="timeline-links-svg" class="timeline-links-svg" aria-hidden="true"></svg>
+          </div>
+
+          <svg id="links-svg" class="links-svg" aria-label="Note relationships"></svg>
+          <div id="notes-layer" class="notes-layer"></div>
+        </div>
+      </div>
+    </main>
+
+    <template id="note-template">
+      <article class="note" draggable="false">
+        <div class="note-collapsed-row" aria-hidden="true">
+          <span class="note-collapsed-order"></span>
+          <span class="note-collapsed-text"></span>
+          <span class="note-collapsed-duration"></span>
+        </div>
+        <div class="note-topbar">
+          <div class="note-meta">
+            <span class="note-order"></span>
+            <span class="note-date"></span>
+          </div>
+          <button class="note-delete" type="button" title="Delete note" aria-label="Delete note">×</button>
+        </div>
+        <div class="note-duration" aria-label="Task duration in weeks">
+          <button class="duration-btn duration-up" type="button" aria-label="Increase duration">▲</button>
+          <div class="duration-value"><span class="duration-weeks">1</span> wk</div>
+          <button class="duration-btn duration-down" type="button" aria-label="Decrease duration">▼</button>
+        </div>
+        <div class="note-predecessors" aria-live="polite"></div>
+        <button class="note-link" type="button" title="Link note" aria-label="Link note">🔗</button>
+        <div class="note-content" contenteditable="true" spellcheck="true">New idea...</div>
+      </article>
+    </template>
+
+    <script src="auth.js?v=8"></script>
+    <script src="app.js?v=8"></script>
+  </body>
+</html>
