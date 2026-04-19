@@ -31,11 +31,7 @@ const TSAuth = (() => {
   }
 
   function loadProjects() {
-    try {
-      return JSON.parse(localStorage.getItem(PROJECTS_KEY) || "[]");
-    } catch {
-      return [];
-    }
+    return window.TSData?.getProjectsSync ? window.TSData.getProjectsSync() : [];
   }
 
   function getSession() {
@@ -107,10 +103,14 @@ const TSAuth = (() => {
     return assignments;
   }
 
-  function authenticate(email, password) {
+  async function authenticate(email, password) {
     const normalizedEmail = normalizeEmail(email);
     if (password !== DEFAULT_PASSWORD) {
       return { ok: false, message: "Invalid password." };
+    }
+
+    if (window.TSData?.initialize) {
+      await window.TSData.initialize();
     }
 
     if (normalizedEmail === SUPER_ADMIN_EMAIL) {

@@ -77,4 +77,11 @@ document.getElementById("logout-btn").addEventListener("click", () => {
   window.location.href = "login.html";
 });
 
-renderProjectAdminOverview();
+async function initializePage() {
+  if (window.TSData?.initialize) {
+    await window.TSData.initialize();
+  }
+  renderProjectAdminOverview();
+}
+
+initializePage();

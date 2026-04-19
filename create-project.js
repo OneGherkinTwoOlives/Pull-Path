@@ -42,14 +42,14 @@ function uid() {
 }
 
 function loadProjects() {
-  try {
-    return JSON.parse(localStorage.getItem(PROJECTS_KEY) || "[]");
-  } catch {
-    return [];
-  }
+  return window.TSData?.getProjectsSync ? window.TSData.getProjectsSync() : [];
 }
 
-function saveProjects(projects) {
+async function saveProjects(projects) {
+  if (window.TSData?.saveProjects) {
+    await window.TSData.saveProjects(projects);
+    return;
+  }
   localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
 }
 
@@ -430,14 +430,14 @@ function boardStorageKey(projectId) {
 }
 
 function loadBoardState(projectId) {
-  try {
-    return JSON.parse(localStorage.getItem(boardStorageKey(projectId)) || "null");
-  } catch {
-    return null;
-  }
+  return window.TSData?.getBoardStateSync ? window.TSData.getBoardStateSync(projectId) : null;
 }
 
-function saveBoardState(projectId, boardState) {
+async function saveBoardState(projectId, boardState) {
+  if (window.TSData?.saveBoardState) {
+    await window.TSData.saveBoardState(projectId, boardState);
+    return;
+  }
   localStorage.setItem(boardStorageKey(projectId), JSON.stringify(boardState));
 }
 
@@ -482,7 +482,7 @@ function clearImportedTasksFromBoardState(boardState) {
   boardState.links = [];
 }
 
-function removeImportedTaskFile() {
+async function removeImportedTaskFile() {
   if (!importedCsvFileName) {
     return;
   }
@@ -497,12 +497,14 @@ function removeImportedTaskFile() {
     const idx = projects.findIndex((project) => project.id === EDIT_PROJECT_ID);
     if (idx !== -1) {
       projects[idx].importedTaskCsvName = null;
-      saveProjects(projects);
+      await saveProjects(projects);
     }
 
-    const boardState = loadBoardState(EDIT_PROJECT_ID) || {};
+    const boardState = (window.TSData?.fetchBoardState
+      ? await window.TSData.fetchBoardState(EDIT_PROJECT_ID)
+      : loadBoardState(EDIT_PROJECT_ID)) || {};
     clearImportedTasksFromBoardState(boardState);
-    saveBoardState(EDIT_PROJECT_ID, boardState);
+    await saveBoardState(EDIT_PROJECT_ID, boardState);
   }
 
   importedTasks = [];
@@ -750,7 +752,7 @@ function getDeliverablesData() {
   }
 }
 
-function submitForm(event) {
+async function submitForm(event) {
   event.preventDefault();
 
   if (!validatePage2()) {
@@ -789,12 +791,15 @@ function submitForm(event) {
     existing.projectAdmins = normalizeStoredProjectAdmins(existing);
     existing.importedTaskCsvName = importedCsvFileName || null;
     projects[idx] = existing;
-    saveProjects(projects);
+    await saveProjects(projects);
 
     // Update board state without wiping existing notes / links
-    const boardKey = `board-state-${EDIT_PROJECT_ID}`;
     let boardState = {};
-    try { boardState = JSON.parse(localStorage.getItem(boardKey) || "{}"); } catch {}
+    try {
+      boardState = (window.TSData?.fetchBoardState
+        ? await window.TSData.fetchBoardState(EDIT_PROJECT_ID)
+        : loadBoardState(EDIT_PROJECT_ID)) || {};
+    } catch {}
     boardState.projectName = name;
     boardState.stageDurationWeeks = durationWeeks;
     boardState.finishDateMs = finishDateMs;
@@ -808,7 +813,7 @@ function submitForm(event) {
       boardState.snapToWeek = imported.snapToWeek;
     }
     boardState.importedTaskCsvName = importedCsvFileName || null;
-    localStorage.setItem(boardKey, JSON.stringify(boardState));
+    await saveBoardState(EDIT_PROJECT_ID, boardState);
 
     localStorage.setItem("ts-active-project-id", EDIT_PROJECT_ID);
     window.location.href = `board.html?projectId=${encodeURIComponent(EDIT_PROJECT_ID)}`;
@@ -830,7 +835,7 @@ function submitForm(event) {
 
     const projects = loadProjects();
     projects.push(project);
-    saveProjects(projects);
+  await saveProjects(projects);
 
     const imported = importedTasks.length
       ? buildImportedBoardState(importedTasks, startMs, finishDateMs, durationWeeks)
@@ -844,7 +849,7 @@ function submitForm(event) {
           links: [],
         };
 
-    localStorage.setItem(`board-state-${project.id}`, JSON.stringify({
+    await saveBoardState(project.id, {
       projectName: project.name,
       stageDurationWeeks: imported.stageDurationWeeks,
       finishDateMs: imported.finishDateMs,
@@ -855,14 +860,14 @@ function submitForm(event) {
       links: imported.links,
       deliverables,
       importedTaskCsvName: importedCsvFileName || null,
-    }));
+    });
 
     localStorage.setItem("ts-active-project-id", project.id);
     window.location.href = `board.html?projectId=${encodeURIComponent(project.id)}`;
   }
 }
 
-function loadProjectForEdit(projectId) {
+async function loadProjectForEdit(projectId) {
   const projects = loadProjects();
   const project = projects.find((p) => p.id === projectId);
   if (!project) return;
@@ -954,9 +959,16 @@ document.querySelectorAll('input[name="deliverable-type"]').forEach((radio) => {
   radio.addEventListener("change", updateDeliverableSection);
 });
 
-if (EDIT_PROJECT_ID) {
-  loadProjectForEdit(EDIT_PROJECT_ID);
-} else {
-  // Initialize deliverables section for new projects
-  updateDeliverableSection();
+async function initializePage() {
+  if (window.TSData?.initialize) {
+    await window.TSData.initialize();
+  }
+
+  if (EDIT_PROJECT_ID) {
+    await loadProjectForEdit(EDIT_PROJECT_ID);
+  } else {
+    updateDeliverableSection();
+  }
 }
+
+initializePage();

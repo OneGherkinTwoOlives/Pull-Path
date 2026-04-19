@@ -10,11 +10,7 @@ if (!session) {
 }
 
 function loadProjects() {
-  try {
-    return JSON.parse(localStorage.getItem(PROJECTS_KEY) || "[]");
-  } catch {
-    return [];
-  }
+  return window.TSData?.getProjectsSync ? window.TSData.getProjectsSync() : [];
 }
 
 function slugify(text) {
@@ -22,11 +18,7 @@ function slugify(text) {
 }
 
 function loadBoardState(projectId) {
-  try {
-    return JSON.parse(localStorage.getItem(`board-state-${projectId}`) || "null");
-  } catch {
-    return null;
-  }
+  return window.TSData?.getBoardStateSync ? window.TSData.getBoardStateSync(projectId) : null;
 }
 
 function formatUtcDate(ms) {
@@ -113,8 +105,10 @@ function buildTaktCsv(project, boardState) {
   return lines.join("\n");
 }
 
-function exportProjectSchedule(project) {
-  const boardState = loadBoardState(project.id);
+async function exportProjectSchedule(project) {
+  const boardState = window.TSData?.fetchBoardState
+    ? await window.TSData.fetchBoardState(project.id)
+    : loadBoardState(project.id);
   if (!boardState || !Array.isArray(boardState.notes) || boardState.notes.length === 0) {
     alert("No saved takt schedule found for this project.");
     return;
@@ -168,8 +162,8 @@ function renderProjects() {
     exportBtn.type = "button";
     exportBtn.className = "export-btn";
     exportBtn.textContent = "Export";
-    exportBtn.addEventListener("click", () => {
-      exportProjectSchedule(project);
+    exportBtn.addEventListener("click", async () => {
+      await exportProjectSchedule(project);
     });
 
     row.appendChild(btn);
@@ -189,4 +183,11 @@ document.getElementById("logout-btn").addEventListener("click", () => {
   window.location.href = "login.html";
 });
 
-renderProjects();
+async function initializePage() {
+  if (window.TSData?.initialize) {
+    await window.TSData.initialize();
+  }
+  renderProjects();
+}
+
+initializePage();

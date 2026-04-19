@@ -8,11 +8,11 @@ if (existingSession) {
   window.location.href = window.TSAuth.routeForRole(existingSession.role);
 }
 
-loginForm.addEventListener("submit", (event) => {
+loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   errorEl.textContent = "";
 
-  const result = window.TSAuth.authenticate(emailInput.value, passwordInput.value);
+  const result = await window.TSAuth.authenticate(emailInput.value, passwordInput.value);
   if (!result.ok) {
     errorEl.textContent = result.message || "Login failed.";
     return;

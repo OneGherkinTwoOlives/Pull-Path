@@ -186,14 +186,14 @@ function getViewStorageKey() {
 }
 
 function loadProjects() {
-  try {
-    return JSON.parse(localStorage.getItem(PROJECTS_KEY) || "[]");
-  } catch {
-    return [];
-  }
+  return window.TSData?.getProjectsSync ? window.TSData.getProjectsSync() : [];
 }
 
-function saveProjects(projects) {
+async function saveProjects(projects) {
+  if (window.TSData?.saveProjects) {
+    await window.TSData.saveProjects(projects);
+    return;
+  }
   localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
 }
 
@@ -233,7 +233,7 @@ function applyRoleUi() {
   }
 }
 
-function configureSwimLanesFromProject() {
+async function configureSwimLanesFromProject() {
   const projectId = getProjectIdFromLocation();
   const project = loadProjects().find((item) => item.id === projectId);
   currentProject = project || null;
@@ -274,9 +274,6 @@ function configureSwimLanesFromProject() {
     color: LANE_COLORS[index % LANE_COLORS.length],
   }));
 }
-
-configureSwimLanesFromProject();
-applyRoleUi();
 
 function getProjectName() {
   const name = (projectNameEl?.textContent || "").trim();
@@ -444,17 +441,21 @@ function serializeViewState() {
   };
 }
 
-function saveState() {
+async function saveState() {
   try {
     const serialized = serializeState();
-    localStorage.setItem(getStorageKey(), JSON.stringify(serialized));
+    if (window.TSData?.saveBoardState) {
+      await window.TSData.saveBoardState(getProjectIdFromLocation(), serialized);
+    } else {
+      localStorage.setItem(getStorageKey(), JSON.stringify(serialized));
+    }
 
     const projectId = getProjectIdFromLocation();
     const projects = loadProjects();
     const project = projects.find((item) => item.id === projectId);
     if (project) {
       project.name = serialized.projectName;
-      saveProjects(projects);
+      await saveProjects(projects);
     }
     setStatus("✓ Board saved");
   } catch (err) {
@@ -471,8 +472,11 @@ function saveViewState() {
   }
 }
 
-function loadState() {
+async function loadState() {
   try {
+    if (window.TSData?.fetchBoardState) {
+      return await window.TSData.fetchBoardState(getProjectIdFromLocation());
+    }
     const stored = localStorage.getItem(getStorageKey());
     if (!stored) {
       return null;
@@ -2816,11 +2820,21 @@ window.addEventListener("resize", () => {
   refreshLayout({ noteStartTimestamps });
 });
 
-const savedState = loadState();
-if (savedState) {
-  applyLoadedState(savedState, loadViewState());
-  setStatus("Board loaded from save.");
-} else {
+async function initializeBoard() {
+  if (window.TSData?.initialize) {
+    await window.TSData.initialize();
+  }
+
+  await configureSwimLanesFromProject();
+  applyRoleUi();
+
+  const savedState = await loadState();
+  if (savedState) {
+    applyLoadedState(savedState, loadViewState());
+    setStatus("Board loaded from save.");
+    return;
+  }
+
   state.finishDateMs = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate());
   finishDateInput.value = utcMsToDateValue(state.finishDateMs);
   stageDurationInput.value = String(state.stageDurationWeeks);
@@ -2848,3 +2862,5 @@ if (savedState) {
   renderLinks();
   saveState();
 }
+
+initializeBoard();
