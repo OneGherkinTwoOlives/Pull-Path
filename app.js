@@ -2597,7 +2597,6 @@ document.addEventListener("pointerup", () => {
 });
 
 if (addNoteBtn && addNoteMenu) {
-  populateAddNoteMenu();
   addNoteBtn.addEventListener("click", (event) => {
     event.stopPropagation();
     if (addNoteMenu.hidden) {
@@ -2613,7 +2612,6 @@ if (addNoteBtn && addNoteMenu) {
 }
 
 if (prerequisiteBtn && prerequisiteMenu) {
-  populatePrerequisiteMenu();
   prerequisiteBtn.addEventListener("click", (event) => {
     event.stopPropagation();
     if (prerequisiteMenu.hidden) {
@@ -2826,6 +2824,8 @@ async function initializeBoard() {
   }
 
   await configureSwimLanesFromProject();
+  populateAddNoteMenu();
+  populatePrerequisiteMenu();
   applyRoleUi();
 
   const savedState = await loadState();
@@ -2851,9 +2851,14 @@ async function initializeBoard() {
   createTickMarks();
   setStatus("Ready. Add your first note.");
 
-  createNote({ x: 120, y: laneTopY("architect")  + 36, text: "Kickoff",       durationWeeks: 2, lane: "architect"  });
-  createNote({ x: 390, y: laneTopY("mechanical") + 36, text: "Design review", durationWeeks: 4, lane: "mechanical" });
-  createNote({ x: 700, y: laneTopY("electrical") + 36, text: "Release",       durationWeeks: 3, lane: "electrical" });
+  const starterLanes = SWIM_LANES.slice(0, 3);
+  const firstLane = starterLanes[0] || SWIM_LANES[0];
+  const secondLane = starterLanes[1] || firstLane;
+  const thirdLane = starterLanes[2] || secondLane;
+
+  createNote({ x: 120, y: laneTopY(firstLane.id) + 36, text: "Kickoff", durationWeeks: 2, lane: firstLane.id });
+  createNote({ x: 390, y: laneTopY(secondLane.id) + 36, text: "Design review", durationWeeks: 4, lane: secondLane.id });
+  createNote({ x: 700, y: laneTopY(thirdLane.id) + 36, text: "Release", durationWeeks: 3, lane: thirdLane.id });
   setSelectedNote([...state.notes.keys()][0]);
   state.links.push(
     { id: uid("link"), a: [...state.notes.keys()][0], b: [...state.notes.keys()][1], type: "FS" },
