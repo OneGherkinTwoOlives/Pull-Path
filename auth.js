@@ -103,17 +103,31 @@ const TSAuth = (() => {
     return assignments;
   }
 
+  async function resolveAdminAccount(email) {
+    const normalized = normalizeEmail(email);
+    if (!normalized || !window.TSData?.fetchAdminAccount) {
+      return null;
+    }
+    return await window.TSData.fetchAdminAccount(normalized);
+  }
+
+  async function resolveAdminPassword(email) {
+    const account = await resolveAdminAccount(email);
+    return account?.password || DEFAULT_PASSWORD;
+  }
+
   async function authenticate(email, password) {
     const normalizedEmail = normalizeEmail(email);
-    if (password !== DEFAULT_PASSWORD) {
-      return { ok: false, message: "Invalid password." };
-    }
 
     if (window.TSData?.initialize) {
       await window.TSData.initialize();
     }
 
     if (normalizedEmail === SUPER_ADMIN_EMAIL) {
+      const expectedPassword = await resolveAdminPassword(normalizedEmail);
+      if (password !== expectedPassword) {
+        return { ok: false, message: "Invalid password." };
+      }
       return {
         ok: true,
         session: {
@@ -126,6 +140,10 @@ const TSAuth = (() => {
 
     const projectAdminProjects = projectAdminAssignments(normalizedEmail);
     if (projectAdminProjects.length > 0) {
+      const expectedPassword = await resolveAdminPassword(normalizedEmail);
+      if (password !== expectedPassword) {
+        return { ok: false, message: "Invalid password." };
+      }
       return {
         ok: true,
         session: {
@@ -140,6 +158,10 @@ const TSAuth = (() => {
     const assignments = consultantAssignments(normalizedEmail);
     if (assignments.length === 0) {
       return { ok: false, message: "No consultant assignments found for this email." };
+    }
+
+    if (password !== DEFAULT_PASSWORD) {
+      return { ok: false, message: "Invalid password." };
     }
 
     return {
@@ -178,6 +200,7 @@ const TSAuth = (() => {
     SUPER_ADMIN_EMAIL,
     DEFAULT_PASSWORD,
     authenticate,
+    resolveAdminAccount,
     consultantAssignments,
     projectAdminAssignments,
     getSession,

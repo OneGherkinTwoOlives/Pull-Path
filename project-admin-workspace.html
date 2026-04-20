@@ -11,16 +11,22 @@
   </head>
   <body>
     <main class="portal-main">
-      <section class="portal-card">
-        <div class="workspace-header-row">
-          <h1>Project Administrator Workspace</h1>
-          <button id="logout-btn" class="secondary-btn" type="button">Logout</button>
-        </div>
-        <p id="project-admin-email" class="muted"></p>
-        <h2>Managed Projects</h2>
-        <ul id="project-admin-project-list" class="project-list"></ul>
-        <p id="project-admin-empty" class="muted">No projects are assigned to this administrator.</p>
-      </section>
+      <div class="portal-stack">
+        <img class="portal-top-logo" src="Logo-Vector.png" alt="Pull Path" />
+        <section class="portal-card">
+          <div class="workspace-header-row">
+            <h1>Project Administrator Workspace</h1>
+            <div class="workspace-actions">
+              <a class="secondary-link action-link" href="account-settings.html">Account Settings</a>
+              <button id="logout-btn" class="secondary-btn" type="button">Logout</button>
+            </div>
+          </div>
+          <p id="project-admin-email" class="muted"></p>
+          <h2>Managed Projects</h2>
+          <ul id="project-admin-project-list" class="project-list"></ul>
+          <p id="project-admin-empty" class="muted">No projects are assigned to this administrator.</p>
+        </section>
+      </div>
     </main>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>

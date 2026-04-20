@@ -11,19 +11,21 @@
   </head>
   <body>
     <main class="portal-main">
-      <section class="portal-card form-card wizard-card">
-        <div class="wizard-progress">
-          <div class="progress-step active" data-page="1">
-            <span class="step-number">1</span>
-            <span class="step-label">Project Team</span>
+      <div class="portal-stack">
+        <img class="portal-top-logo" src="Logo-Vector.png" alt="Pull Path" />
+        <section class="portal-card form-card wizard-card">
+          <div class="wizard-progress">
+            <div class="progress-step active" data-page="1">
+              <span class="step-number">1</span>
+              <span class="step-label">Project Team</span>
+            </div>
+            <div class="progress-step" data-page="2">
+              <span class="step-number">2</span>
+              <span class="step-label">Project Details</span>
+            </div>
           </div>
-          <div class="progress-step" data-page="2">
-            <span class="step-number">2</span>
-            <span class="step-label">Project Details</span>
-          </div>
-        </div>
 
-        <form id="create-project-form" class="wizard-form">
+          <form id="create-project-form" class="wizard-form">
           <!-- Page 1: Project Team -->
           <div class="wizard-page active" data-page="1">
             <h1>Create New Project - Step 1: Project Team</h1>
@@ -36,6 +38,11 @@
             <fieldset class="field">
               <legend>Select Disciplines</legend>
               <div id="discipline-list" class="discipline-grid"></div>
+              <div class="custom-discipline-row">
+                <input id="custom-discipline-input" type="text" placeholder="Add other vendor" />
+                <button id="add-custom-discipline-btn" class="secondary-btn" type="button">Add Vendor</button>
+              </div>
+              <span class="field-hint">Use this for vendors or disciplines not listed above.</span>
             </fieldset>
 
             <section class="field">
@@ -46,6 +53,12 @@
               </label>
               <div id="team-rows" class="team-rows"></div>
             </section>
+
+            <label class="field">
+              <span>Project Admin Email</span>
+              <span id="project-admin-email-hint" class="field-hint">The assigned project administrator can manage this project.</span>
+              <input id="project-admin-email-input" type="email" placeholder="admin@company.com" required />
+            </label>
 
             <div class="actions-row">
               <a id="create-project-back-link" class="secondary-link" href="index.html">Back</a>
@@ -120,8 +133,9 @@
               <button class="primary-btn" type="submit">Create Project</button>
             </div>
           </div>
-        </form>
-      </section>
+          </form>
+        </section>
+      </div>
     </main>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>

@@ -61,6 +61,51 @@ function getProjectIdFromUrl() {
 const EDIT_PROJECT_ID = getProjectIdFromUrl();
 let importedTasks = [];
 let importedCsvFileName = "";
+const customDisciplines = new Map();
+
+function normalizeDisciplineName(value) {
+  return String(value || "").trim().replace(/\s+/g, " ");
+}
+
+function availableDisciplines() {
+  const names = [...DISCIPLINES];
+  customDisciplines.forEach((name) => {
+    if (!names.some((existing) => slugify(existing) === slugify(name))) {
+      names.push(name);
+    }
+  });
+  return names;
+}
+
+function ensureCustomDiscipline(name) {
+  const normalized = normalizeDisciplineName(name);
+  if (!normalized) {
+    return "";
+  }
+
+  const existing = availableDisciplines().find((discipline) => slugify(discipline) === slugify(normalized));
+  if (existing) {
+    return existing;
+  }
+
+  customDisciplines.set(slugify(normalized), normalized);
+  return normalized;
+}
+
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || "").trim());
+}
+
+function getProjectAdminEmail() {
+  return window.TSAuth.normalizeEmail(document.getElementById("project-admin-email-input")?.value || "");
+}
+
+function setProjectAdminEmail(email) {
+  const input = document.getElementById("project-admin-email-input");
+  if (input) {
+    input.value = window.TSAuth.normalizeEmail(email || "");
+  }
+}
 
 function normalizeStoredProjectAdmins(project) {
   const admins = Array.isArray(project?.projectAdmins) ? project.projectAdmins.filter(Boolean) : [];
@@ -94,6 +139,20 @@ function applyRoleUi() {
   const backLink = document.getElementById("create-project-back-link");
   if (backLink) {
     backLink.href = defaultWorkspaceRoute();
+  }
+
+  const adminEmailInput = document.getElementById("project-admin-email-input");
+  const adminEmailHint = document.getElementById("project-admin-email-hint");
+  if (adminEmailInput) {
+    if (isProjectAdmin) {
+      adminEmailInput.value = authSession.email;
+      adminEmailInput.disabled = true;
+      if (adminEmailHint) {
+        adminEmailHint.textContent = "Project administrators can only manage projects assigned to their own email.";
+      }
+    } else {
+      adminEmailInput.value = authSession.email;
+    }
   }
 
   if (isProjectAdmin && !EDIT_PROJECT_ID) {
@@ -137,6 +196,20 @@ function refreshTeamDisciplineOptions() {
   });
 }
 
+function renderDisciplineOptions(selectedValues = selectedDisciplines()) {
+  const container = document.getElementById("discipline-list");
+  const selectedSlugs = new Set((selectedValues || []).map((name) => slugify(name)));
+
+  container.innerHTML = "";
+  availableDisciplines().forEach((name, index) => {
+    const id = `disc-${index}-${slugify(name)}`;
+    const label = document.createElement("label");
+    label.className = "discipline-option";
+    label.innerHTML = `<input id="${id}" class="discipline-checkbox" type="checkbox" value="${name}" ${selectedSlugs.has(slugify(name)) ? "checked" : ""} /> <span>${name}</span>`;
+    container.appendChild(label);
+  });
+}
+
 function parseAndRenderTeamEmails(presetTeam = null) {
   const raw = document.getElementById("team-email-input").value;
   const emails = raw
@@ -170,19 +243,32 @@ function parseAndRenderTeamEmails(presetTeam = null) {
   });
 }
 
-function renderDisciplines() {
-  const container = document.getElementById("discipline-list");
-  DISCIPLINES.forEach((name, index) => {
-    const id = `disc-${index}`;
-    const label = document.createElement("label");
-    label.className = "discipline-option";
-    label.innerHTML = `<input id="${id}" class="discipline-checkbox" type="checkbox" value="${name}" /> <span>${name}</span>`;
-    container.appendChild(label);
-  });
+function addCustomDisciplineFromInput() {
+  const input = document.getElementById("custom-discipline-input");
+  if (!input) {
+    return;
+  }
 
-  container.addEventListener("change", () => {
-    refreshTeamDisciplineOptions();
-  });
+  const name = ensureCustomDiscipline(input.value);
+  if (!name) {
+    return;
+  }
+
+  renderDisciplineOptions([...selectedDisciplines(), name]);
+  refreshTeamDisciplineOptions();
+  input.value = "";
+}
+
+function renderDisciplines(selectedValues = []) {
+  const container = document.getElementById("discipline-list");
+  renderDisciplineOptions(selectedValues);
+
+  if (!container.dataset.bound) {
+    container.addEventListener("change", () => {
+      refreshTeamDisciplineOptions();
+    });
+    container.dataset.bound = "true";
+  }
 }
 
 function buildTeam() {
@@ -268,8 +354,8 @@ function normalizeDiscipline(input) {
 
   const rawSlug = slugify(raw);
   const canonicalSlug = aliasMap[rawSlug] || rawSlug;
-  const match = DISCIPLINES.find((name) => slugify(name) === canonicalSlug);
-  return match || "";
+  const match = availableDisciplines().find((name) => slugify(name) === canonicalSlug);
+  return match || ensureCustomDiscipline(raw);
 }
 
 function parseWeekDuration(value) {
@@ -597,9 +683,15 @@ function validatePage1() {
   const name = document.getElementById("project-name-input").value.trim();
   const disciplines = selectedDisciplines();
   const team = buildTeam();
+  const projectAdminEmail = getProjectAdminEmail();
 
   if (!name) {
     alert("Project name is required.");
+    return false;
+  }
+
+  if (!projectAdminEmail || !isValidEmail(projectAdminEmail)) {
+    alert("Enter a valid project admin email.");
     return false;
   }
 
@@ -764,6 +856,7 @@ async function submitForm(event) {
   const durationWeeks = Number(document.getElementById("project-duration").value);
   const disciplines = selectedDisciplines();
   const deliverables = getDeliverablesData();
+  const projectAdminEmail = isProjectAdmin ? authSession.email : getProjectAdminEmail();
 
   const startMs = Date.parse(`${startDate}T00:00:00Z`);
   const finishDateMs = startMs + durationWeeks * 7 * 24 * 60 * 60 * 1000;
@@ -788,7 +881,7 @@ async function submitForm(event) {
     existing.disciplines = disciplines;
     existing.team = buildTeam();
     existing.deliverables = deliverables;
-    existing.projectAdmins = normalizeStoredProjectAdmins(existing);
+    existing.projectAdmins = [projectAdminEmail];
     existing.importedTaskCsvName = importedCsvFileName || null;
     projects[idx] = existing;
     await saveProjects(projects);
@@ -826,7 +919,7 @@ async function submitForm(event) {
       durationWeeks,
       disciplines,
       team: buildTeam(),
-      projectAdmins: [authSession.email],
+      projectAdmins: [projectAdminEmail],
       deliverables,
       createdByEmail: authSession.email,
       importedTaskCsvName: importedCsvFileName || null,
@@ -886,10 +979,15 @@ async function loadProjectForEdit(projectId) {
   document.getElementById("project-name-input").value = project.name;
   document.getElementById("project-start-date").value = project.startDate;
   document.getElementById("project-duration").value = project.durationWeeks;
+  setProjectAdminEmail(normalizeStoredProjectAdmins(project)[0] || project.createdByEmail || authSession.email);
 
-  document.querySelectorAll(".discipline-checkbox").forEach((checkbox) => {
-    checkbox.checked = project.disciplines.includes(checkbox.value);
+  (Array.isArray(project.disciplines) ? project.disciplines : []).forEach((discipline) => {
+    if (!DISCIPLINES.some((name) => slugify(name) === slugify(discipline))) {
+      ensureCustomDiscipline(discipline);
+    }
   });
+  renderDisciplines(project.disciplines || []);
+
   refreshTeamDisciplineOptions();
   // Populate textarea and render rows with saved discipline selections
   const textarea = document.getElementById("team-email-input");
@@ -927,6 +1025,13 @@ async function loadProjectForEdit(projectId) {
 applyRoleUi();
 renderDisciplines();
 document.getElementById("team-email-input").addEventListener("input", parseAndRenderTeamEmails);
+document.getElementById("add-custom-discipline-btn").addEventListener("click", addCustomDisciplineFromInput);
+document.getElementById("custom-discipline-input").addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    addCustomDisciplineFromInput();
+  }
+});
 document.getElementById("create-project-form").addEventListener("submit", submitForm);
 document.getElementById("task-csv-input").addEventListener("change", handleTaskCsvChange);
 document.getElementById("task-csv-select-btn").addEventListener("click", () => {

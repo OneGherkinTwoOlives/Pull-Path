@@ -174,6 +174,7 @@ function renderProjects() {
   });
 }
 
+
 document.getElementById("create-project-btn").addEventListener("click", () => {
   window.location.href = `create-project.html?v=${CREATE_PROJECT_VERSION}`;
 });

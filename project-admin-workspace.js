@@ -44,6 +44,7 @@ function renderAssignments() {
   });
 }
 
+
 document.getElementById("logout-btn").addEventListener("click", () => {
   window.TSAuth.logout();
   window.location.href = "login.html";

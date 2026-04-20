@@ -13,9 +13,9 @@ body {
   font-family: "IBM Plex Sans", sans-serif;
   color: var(--ink);
   background:
-    radial-gradient(circle at 20% 20%, rgba(255, 125, 72, 0.18), transparent 40%),
-    radial-gradient(circle at 80% 70%, rgba(13, 110, 110, 0.18), transparent 35%),
-    var(--paper);
+    radial-gradient(circle at 20% 20%, rgba(38, 61, 65, 0.34), transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(57, 91, 84, 0.34), transparent 35%),
+    rgb(38, 61, 65);
 }
 
 body.login-page {
@@ -27,6 +27,19 @@ body.login-page {
   display: grid;
   place-items: center;
   padding: 1.2rem;
+}
+
+.portal-stack {
+  width: min(1100px, 96vw);
+  display: grid;
+  justify-items: center;
+  gap: 1rem;
+}
+
+.portal-top-logo {
+  width: min(340px, 78vw);
+  height: auto;
+  object-fit: contain;
 }
 
 .portal-card {
@@ -188,8 +201,91 @@ h2 { margin: 0 0 0.55rem; font-size: 1.1rem; }
 .project-form { display: grid; gap: 0.9rem; }
 .field { display: grid; gap: 0.35rem; }
 .field input { border: 1px solid rgba(0,0,0,0.18); border-radius: 10px; padding: 0.45rem 0.55rem; font: inherit; }
+.field textarea {
+  border: 1px solid rgba(0,0,0,0.18);
+  border-radius: 10px;
+  padding: 0.45rem 0.55rem;
+  font: inherit;
+  resize: vertical;
+  width: 100%;
+}
 
 .field-row { display: grid; grid-template-columns: 1fr 220px; gap: 0.8rem; }
+.settings-password-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.settings-contact-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+.settings-page-card {
+  width: min(920px, 96vw);
+}
+
+.settings-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.settings-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.settings-section {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.settings-meta {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(14, 21, 23, 0.45);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  z-index: 1000;
+}
+
+.modal-backdrop[hidden] {
+  display: none;
+}
+
+.modal-card {
+  width: min(520px, 100%);
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  padding: 1rem;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.16);
+}
+
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.8rem;
+}
+
+.modal-close-btn {
+  border: 0;
+  background: transparent;
+  color: rgba(0, 0, 0, 0.6);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.modal-close-btn:hover {
+  color: rgba(0, 0, 0, 0.85);
+}
 
 .discipline-grid {
   display: grid;
@@ -198,6 +294,20 @@ h2 { margin: 0 0 0.55rem; font-size: 1.1rem; }
 }
 
 .discipline-option { display: flex; align-items: center; gap: 0.4rem; font-size: 0.92rem; }
+
+.custom-discipline-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.65rem;
+  margin-top: 0.8rem;
+}
+
+.custom-discipline-row input {
+  border: 1px solid rgba(0,0,0,0.18);
+  border-radius: 10px;
+  padding: 0.45rem 0.55rem;
+  font: inherit;
+}
 
 .import-field {
   padding: 0.6rem 0.7rem;
@@ -255,12 +365,7 @@ h2 { margin: 0 0 0.55rem; font-size: 1.1rem; }
 }
 
 .team-email-input {
-  border: 1px solid rgba(0,0,0,0.18);
-  border-radius: 10px;
-  padding: 0.45rem 0.55rem;
-  font: inherit;
   resize: vertical;
-  width: 100%;
 }
 
 .team-rows {
@@ -362,10 +467,13 @@ h2 { margin: 0 0 0.55rem; font-size: 1.1rem; }
   .portal-grid { grid-template-columns: 1fr; }
   .admin-summary-grid { grid-template-columns: 1fr; }
   .discipline-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .custom-discipline-row { grid-template-columns: 1fr; }
   .field-row { grid-template-columns: 1fr; }
   .login-layout { grid-template-columns: 1fr; }
   .login-right { min-height: 180px; }
   .login-logo { width: min(300px, 88%); }
+  .settings-card-header { flex-direction: column; }
+  .portal-top-logo { width: min(260px, 70vw); }
 }
 
 /* Wizard styles */

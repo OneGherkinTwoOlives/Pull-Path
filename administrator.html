@@ -11,36 +11,39 @@
   </head>
   <body>
     <main class="portal-main">
-      <section class="portal-card">
-        <div class="workspace-header-row">
-          <h1>Administrator Page</h1>
-          <div class="workspace-actions">
-            <a class="secondary-link action-link" href="index.html">Back to Workspace</a>
-            <button id="logout-btn" class="secondary-btn" type="button">Logout</button>
-          </div>
-        </div>
-
-        <div class="admin-summary-grid">
-          <section class="portal-col">
-            <h2>Site Administration</h2>
-            <p id="super-admin-email" class="muted"></p>
-            <p class="muted">This account controls the website and all project-level administrators.</p>
-          </section>
-          <section class="portal-col">
-            <h2>Portfolio Summary</h2>
-            <div id="admin-stats" class="stats-list"></div>
-          </section>
-        </div>
-
-        <section class="portal-col admin-section-block">
+      <div class="portal-stack">
+        <img class="portal-top-logo" src="Logo-Vector.png" alt="Pull Path" />
+        <section class="portal-card">
           <div class="workspace-header-row">
-            <h2>Project Administrators</h2>
-            <button id="create-project-btn" class="primary-btn" type="button">Create New Project</button>
+            <h1>Administrator Page</h1>
+            <div class="workspace-actions">
+              <a class="secondary-link action-link" href="index.html">Back to Workspace</a>
+              <button id="logout-btn" class="secondary-btn" type="button">Logout</button>
+            </div>
           </div>
-          <ul id="project-admin-overview" class="project-list"></ul>
-          <p id="project-admin-overview-empty" class="muted">No projects available.</p>
+
+          <div class="admin-summary-grid">
+            <section class="portal-col">
+              <h2>Site Administration</h2>
+              <p id="super-admin-email" class="muted"></p>
+              <p class="muted">This account controls the website and all project-level administrators.</p>
+            </section>
+            <section class="portal-col">
+              <h2>Portfolio Summary</h2>
+              <div id="admin-stats" class="stats-list"></div>
+            </section>
+          </div>
+
+          <section class="portal-col admin-section-block">
+            <div class="workspace-header-row">
+              <h2>Project Administrators</h2>
+              <button id="create-project-btn" class="primary-btn" type="button">Create New Project</button>
+            </div>
+            <ul id="project-admin-overview" class="project-list"></ul>
+            <p id="project-admin-overview-empty" class="muted">No projects available.</p>
+          </section>
         </section>
-      </section>
+      </div>
     </main>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>

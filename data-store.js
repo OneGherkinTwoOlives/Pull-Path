@@ -1,5 +1,6 @@
 const TSData = (() => {
   const PROJECTS_KEY = "ts-projects";
+  const ADMIN_ACCOUNTS_KEY = "ts-admin-accounts";
   const BOARD_PREFIX = "board-state-";
   const VIEW_PREFIX = "board-view-";
   const config = window.TSSupabaseConfig || {};
@@ -21,6 +22,32 @@ const TSData = (() => {
 
   function writeProjectsCache(projects) {
     localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
+  }
+
+  function readAdminAccountsCache() {
+    try {
+      return JSON.parse(localStorage.getItem(ADMIN_ACCOUNTS_KEY) || "[]");
+    } catch {
+      return [];
+    }
+  }
+
+  function writeAdminAccountsCache(accounts) {
+    localStorage.setItem(ADMIN_ACCOUNTS_KEY, JSON.stringify(accounts));
+  }
+
+  function upsertAdminAccountsCache(accounts) {
+    const next = [...readAdminAccountsCache()];
+    (accounts || []).forEach((account) => {
+      const idx = next.findIndex((item) => item.email === account.email);
+      if (idx === -1) {
+        next.push(account);
+      } else {
+        next[idx] = account;
+      }
+    });
+    writeAdminAccountsCache(next);
+    return next;
   }
 
   function boardKey(projectId) {
@@ -60,6 +87,19 @@ const TSData = (() => {
     };
   }
 
+  function normalizeAdminAccountRow(row) {
+    return {
+      email: row.email,
+      password: row.password || "123",
+      company: row.company || "",
+      position: row.position || "",
+      telephoneNumbers: Array.isArray(row.telephone_numbers) ? row.telephone_numbers : [],
+      address: row.address || "",
+      createdAt: row.created_at || null,
+      updatedAt: row.updated_at || null,
+    };
+  }
+
   function serializeProject(project) {
     return {
       id: project.id,
@@ -73,6 +113,19 @@ const TSData = (() => {
       created_by_email: project.createdByEmail || null,
       imported_task_csv_name: project.importedTaskCsvName || null,
       created_at: project.createdAt || new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+  }
+
+  function serializeAdminAccount(account) {
+    return {
+      email: account.email,
+      password: account.password || "123",
+      company: account.company || null,
+      position: account.position || null,
+      telephone_numbers: Array.isArray(account.telephoneNumbers) ? account.telephoneNumbers : [],
+      address: account.address || null,
+      created_at: account.createdAt || new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
   }
@@ -134,6 +187,60 @@ const TSData = (() => {
     }
 
     return normalizedProjects;
+  }
+
+  function getAdminAccountSync(email) {
+    return readAdminAccountsCache().find((account) => account.email === email) || null;
+  }
+
+  async function fetchAdminAccount(email) {
+    const cached = getAdminAccountSync(email);
+    if (!email || !isConfigured) {
+      return cached;
+    }
+
+    try {
+      const { data, error } = await client
+        .from("admin_accounts")
+        .select("*")
+        .eq("email", email)
+        .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      const account = data ? normalizeAdminAccountRow(data) : cached;
+      if (account) {
+        upsertAdminAccountsCache([account]);
+      }
+      return account;
+    } catch (err) {
+      console.error("Failed to fetch admin account from Supabase:", err);
+      return cached;
+    }
+  }
+
+  async function saveAdminAccount(account) {
+    const normalized = clone(account || null);
+    if (!normalized?.email) {
+      throw new Error("Admin account email is required.");
+    }
+
+    upsertAdminAccountsCache([normalized]);
+
+    if (!isConfigured) {
+      return normalized;
+    }
+
+    const row = serializeAdminAccount(normalized);
+    const { error } = await client.from("admin_accounts").upsert(row, { onConflict: "email" });
+    if (error) {
+      console.error("Failed to save admin account to Supabase:", error);
+      throw error;
+    }
+
+    return normalized;
   }
 
   async function fetchBoardState(projectId) {
@@ -210,6 +317,9 @@ const TSData = (() => {
     getProjects,
     getProjectsSync,
     saveProjects,
+    getAdminAccountSync,
+    fetchAdminAccount,
+    saveAdminAccount,
     fetchBoardState,
     getBoardStateSync,
     saveBoardState,

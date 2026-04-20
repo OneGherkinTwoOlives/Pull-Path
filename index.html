@@ -11,25 +11,29 @@
   </head>
   <body>
     <main class="portal-main">
-      <section class="portal-card">
-        <div class="workspace-header-row">
-          <h1>Super Administrator Workspace</h1>
-          <div class="workspace-actions">
-            <a id="administrator-link" class="secondary-link action-link" href="administrator.html">Administrator Page</a>
-            <button id="logout-btn" class="secondary-btn" type="button">Logout</button>
+      <div class="portal-stack">
+        <img class="portal-top-logo" src="Logo-Vector.png" alt="Pull Path" />
+        <section class="portal-card">
+          <div class="workspace-header-row">
+            <h1>Super Administrator Workspace</h1>
+            <div class="workspace-actions">
+              <a id="administrator-link" class="secondary-link action-link" href="administrator.html">Administrator Page</a>
+              <a class="secondary-link action-link" href="account-settings.html">Account Settings</a>
+              <button id="logout-btn" class="secondary-btn" type="button">Logout</button>
+            </div>
           </div>
-        </div>
-        <div class="portal-grid">
-          <div class="portal-col">
-            <h2>Current Projects</h2>
-            <ul id="project-list" class="project-list"></ul>
-            <p id="project-empty" class="muted">No projects yet.</p>
+          <div class="portal-grid">
+            <div class="portal-col">
+              <h2>Current Projects</h2>
+              <ul id="project-list" class="project-list"></ul>
+              <p id="project-empty" class="muted">No projects yet.</p>
+            </div>
+            <div class="portal-col portal-col-action">
+              <button id="create-project-btn" class="primary-btn" type="button">Create New Project</button>
+            </div>
           </div>
-          <div class="portal-col portal-col-action">
-            <button id="create-project-btn" class="primary-btn" type="button">Create New Project</button>
-          </div>
-        </div>
-      </section>
+        </section>
+      </div>
     </main>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
