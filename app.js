@@ -9,15 +9,18 @@ const noteTemplate = document.getElementById("note-template");
 
 const addNoteBtn = document.getElementById("add-note-btn");
 const addNoteMenu = document.getElementById("add-note-menu");
+const settingsBtn = document.getElementById("settings-btn");
+const settingsMenu = document.getElementById("settings-menu");
 const prerequisiteBtn = document.getElementById("prerequisite-btn");
 const prerequisiteMenu = document.getElementById("prerequisite-menu");
 const clearLinksBtn = document.getElementById("clear-links-btn");
-const finishDateInput = document.getElementById("finish-date-input");
+const projectAdminPageBtn = document.getElementById("project-admin-page-btn");
+const finishDateValue = document.getElementById("finish-date-value");
 const snapToWeekInput = document.getElementById("snap-to-week-input");
 const collapseAllLanesInput = document.getElementById("collapse-all-lanes-input");
 const showCriticalPathInput = document.getElementById("show-critical-path-input");
 const hideNeutralLinksInput = document.getElementById("hide-neutral-links-input");
-const stageDurationInput = document.getElementById("stage-duration-input");
+const stageDurationValue = document.getElementById("stage-duration-value");
 const neutralLinkWidthInput = document.getElementById("neutral-link-width-input");
 const zoomXInput = document.getElementById("zoom-x-input");
 const zoomYInput = document.getElementById("zoom-y-input");
@@ -37,6 +40,8 @@ const statusEl = document.getElementById("status");
 const stageStartLine = document.getElementById("stage-start-line");
 const stageFinishLine = document.getElementById("stage-finish-line");
 const swimLanesLayer = document.getElementById("swim-lanes-layer");
+const finishDateControl = document.getElementById("finish-date-control");
+const stageDurationControl = document.getElementById("stage-duration-control");
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
@@ -148,6 +153,30 @@ function updateZoomBadges() {
   }
 }
 
+function formatFinishDate(ms) {
+  if (!Number.isFinite(ms) || ms <= 0) {
+    return "Not set";
+  }
+
+  return new Date(ms).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+function updateProjectSettingDisplays() {
+  if (finishDateValue) {
+    finishDateValue.textContent = formatFinishDate(state.finishDateMs);
+  }
+
+  if (stageDurationValue) {
+    const weeks = Math.round(state.stageDurationWeeks) || 0;
+    stageDurationValue.textContent = `${weeks} ${weeks === 1 ? "week" : "weeks"}`;
+  }
+}
+
 function updateNeutralLinkControls() {
   if (hideNeutralLinksInput) {
     hideNeutralLinksInput.checked = state.hideNeutralLinks;
@@ -225,12 +254,13 @@ function applyRoleUi() {
   clearLinksBtn.style.display = "none";
   saveBtn.style.display = "none";
   scheduleToggleBtn.style.display = "none";
-  if (finishDateInput?.closest("label")) {
-    finishDateInput.closest("label").style.display = "none";
+  if (projectAdminPageBtn) {
+    projectAdminPageBtn.style.display = "none";
   }
-  if (stageDurationInput?.closest("label")) {
-    stageDurationInput.closest("label").style.display = "none";
-  }
+}
+
+if (!isProjectAdmin && projectAdminPageBtn) {
+  projectAdminPageBtn.style.display = "none";
 }
 
 async function configureSwimLanesFromProject() {
@@ -297,6 +327,14 @@ function closeAddNoteMenu() {
   addNoteBtn.setAttribute("aria-expanded", "false");
 }
 
+function closeSettingsMenu() {
+  if (!settingsMenu || !settingsBtn) {
+    return;
+  }
+  settingsMenu.hidden = true;
+  settingsBtn.setAttribute("aria-expanded", "false");
+}
+
 function closePrerequisiteMenu() {
   if (!prerequisiteMenu || !prerequisiteBtn) {
     return;
@@ -310,16 +348,28 @@ function openAddNoteMenu() {
   if (!addNoteMenu || !addNoteBtn) {
     return;
   }
+  closeSettingsMenu();
   closePrerequisiteMenu();
   addNoteMenu.hidden = false;
   addNoteMenu.style.display = "grid";
   addNoteBtn.setAttribute("aria-expanded", "true");
 }
 
+function openSettingsMenu() {
+  if (!settingsMenu || !settingsBtn) {
+    return;
+  }
+  closeAddNoteMenu();
+  closePrerequisiteMenu();
+  settingsMenu.hidden = false;
+  settingsBtn.setAttribute("aria-expanded", "true");
+}
+
 function openPrerequisiteMenu() {
   if (!prerequisiteMenu || !prerequisiteBtn) {
     return;
   }
+  closeSettingsMenu();
   closeAddNoteMenu();
   prerequisiteMenu.hidden = false;
   prerequisiteMenu.style.display = "grid";
@@ -513,8 +563,8 @@ function applyLoadedState(loaded, loadedView = null) {
   // Backward compatibility for older saves that used a single zoom value and stored view in shared state.
   const fallbackZoom = loaded.zoom || 1;
   const view = loadedView || {};
-  state.zoomX = view.zoomX || loaded.zoomX || fallbackZoom;
-  state.zoomY = view.zoomY || loaded.zoomY || fallbackZoom;
+  state.zoomX = clamp(Number(view.zoomX) || Number(loaded.zoomX) || fallbackZoom, 0.3, 2.5);
+  state.zoomY = clamp(Number(view.zoomY) || Number(loaded.zoomY) || fallbackZoom, 0.5, 2.5);
   state.noteScale = clamp(Number(view.noteScale) || Number(loaded.noteScale) || 1, 0.5, 2);
   state.snapToWeek = view.snapToWeek !== undefined
     ? !!view.snapToWeek
@@ -531,19 +581,18 @@ function applyLoadedState(loaded, loadedView = null) {
       : [];
   state.deliverables = loaded.deliverables || currentProject?.deliverables || null;
 
-  finishDateInput.value = utcMsToDateValue(state.finishDateMs);
   if (snapToWeekInput) {
     snapToWeekInput.checked = state.snapToWeek;
   }
   if (showCriticalPathInput) {
     showCriticalPathInput.checked = state.showCriticalPath;
   }
-  stageDurationInput.value = String(state.stageDurationWeeks);
   zoomXInput.value = String(Math.round(state.zoomX * 100));
   zoomYInput.value = String(Math.round(state.zoomY * 100));
   if (noteScaleInput) {
     noteScaleInput.value = String(Math.round(state.noteScale * 100));
   }
+  updateProjectSettingDisplays();
   updateZoomBadges();
   applyNeutralLinkStyles();
   updateBoardWidth();
@@ -1976,7 +2025,7 @@ function applyHorizontalZoom(nextZoom, options = {}) {
   const oldWidth = board.clientWidth || 1;
   const oldScrollLeft = boardViewport.scrollLeft;
   const noteStartTimestamps = snapshotNoteStartTimestamps();
-  const clampedZoom = clamp(nextZoom, 0.5, 5);
+  const clampedZoom = clamp(nextZoom, 0.3, 2.5);
 
   state.zoomX = clampedZoom;
   zoomXInput.value = String(Math.round(clampedZoom * 100));
@@ -2006,7 +2055,7 @@ function applyHorizontalZoom(nextZoom, options = {}) {
 
 function applyVerticalZoom(nextZoom) {
   const noteStartTimestamps = snapshotNoteStartTimestamps();
-  const clampedZoom = clamp(nextZoom, 0.5, 5);
+  const clampedZoom = clamp(nextZoom, 0.5, 2.5);
 
   state.zoomY = clampedZoom;
   zoomYInput.value = String(Math.round(clampedZoom * 100));
@@ -2611,6 +2660,21 @@ if (addNoteBtn && addNoteMenu) {
   });
 }
 
+if (settingsBtn && settingsMenu) {
+  settingsBtn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    if (settingsMenu.hidden) {
+      openSettingsMenu();
+    } else {
+      closeSettingsMenu();
+    }
+  });
+
+  settingsMenu.addEventListener("pointerdown", (event) => {
+    event.stopPropagation();
+  });
+}
+
 if (prerequisiteBtn && prerequisiteMenu) {
   prerequisiteBtn.addEventListener("click", (event) => {
     event.stopPropagation();
@@ -2627,6 +2691,11 @@ if (prerequisiteBtn && prerequisiteMenu) {
 }
 
 clearLinksBtn.addEventListener("click", () => {
+  const confirmed = window.confirm("This will clear all predecessor links. Are you should you want to continue?");
+  if (!confirmed) {
+    return;
+  }
+
   state.links = [];
   if (state.selectedForLink) {
     const selected = state.notes.get(state.selectedForLink)?.el;
@@ -2636,8 +2705,16 @@ clearLinksBtn.addEventListener("click", () => {
   }
   renderLinks();
   saveState();
+  closeSettingsMenu();
   setStatus("All relationships removed.");
 });
+
+if (projectAdminPageBtn) {
+  projectAdminPageBtn.addEventListener("click", () => {
+    closeSettingsMenu();
+    window.location.href = "project-admin-workspace.html";
+  });
+}
 
 saveBtn.addEventListener("click", () => {
   saveState();
@@ -2685,6 +2762,7 @@ board.addEventListener("pointerdown", (event) => {
   }
 
   if (!event.target.closest(".add-note-wrap")) {
+    closeSettingsMenu();
     closeAddNoteMenu();
     closePrerequisiteMenu();
   }
@@ -2700,18 +2778,6 @@ board.addEventListener("pointerdown", (event) => {
   if (!event.target.closest(".note")) {
     setSelectedNote(null);
   }
-});
-
-finishDateInput.addEventListener("change", () => {
-  const parsed = dateValueToUtcMs(finishDateInput.value);
-  if (parsed === null) {
-    return;
-  }
-  const noteStartTimestamps = snapshotNoteStartTimestamps();
-  state.finishDateMs = parsed;
-  refreshLayout({ noteStartTimestamps });
-  saveState();
-  setStatus("Finish date updated.");
 });
 
 if (snapToWeekInput) {
@@ -2749,22 +2815,6 @@ if (hideNeutralLinksInput) {
     setStatus(state.hideNeutralLinks ? "Grey links hidden." : "Grey links shown.");
   });
 }
-
-stageDurationInput.addEventListener("change", () => {
-  const parsed = Number(stageDurationInput.value);
-  if (Number.isNaN(parsed)) {
-    return;
-  }
-  const noteStartTimestamps = snapshotNoteStartTimestamps();
-  state.stageDurationWeeks = clamp(Math.round(parsed), MIN_STAGE_WEEKS, MAX_STAGE_WEEKS);
-  stageDurationInput.value = String(state.stageDurationWeeks);
-  state.notes.forEach((note) => {
-    clampNoteDurationToStage(note);
-  });
-  refreshLayout({ noteStartTimestamps });
-  saveState();
-  setStatus("Stage duration updated.");
-});
 
 zoomXInput.addEventListener("input", () => {
   const zoomPercent = Number(zoomXInput.value);
@@ -2836,8 +2886,7 @@ async function initializeBoard() {
   }
 
   state.finishDateMs = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate());
-  finishDateInput.value = utcMsToDateValue(state.finishDateMs);
-  stageDurationInput.value = String(state.stageDurationWeeks);
+  updateProjectSettingDisplays();
   zoomXInput.value = "100";
   zoomYInput.value = "100";
   if (noteScaleInput) {

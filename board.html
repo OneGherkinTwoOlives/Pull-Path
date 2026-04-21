@@ -10,12 +10,80 @@
       href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;700&family=Permanent+Marker&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=8" />
+    <link rel="stylesheet" href="styles.css?v=12" />
   </head>
   <body>
     <header class="app-header">
-      <h1 id="project-name" contenteditable="true" spellcheck="false">Timeline Notes Board</h1>
+      <div class="project-header-group">
+        <img class="board-logo" src="Logo-Vector.png" alt="Pull Path" />
+        <h1 id="project-name" contenteditable="true" spellcheck="false">Timeline Notes Board</h1>
+      </div>
       <section class="toolbar" aria-label="Board controls">
+        <button id="home-btn" class="btn btn-ghost" type="button">Home</button>
+        <button id="logout-btn" class="btn btn-ghost" type="button">Logout</button>
+        <button id="save-btn" class="btn btn-primary">Save</button>
+        <button id="schedule-toggle-btn" class="btn btn-ghost" type="button" aria-expanded="false">Show Takt Schedule</button>
+        <div class="add-note-wrap settings-wrap">
+          <button id="settings-btn" class="btn btn-secondary" type="button" aria-expanded="false">Settings</button>
+          <div id="settings-menu" class="settings-menu" hidden>
+            <div id="finish-date-control" class="settings-field settings-field-inline settings-field-readonly">
+              <span>Finish Date</span>
+              <span id="finish-date-value" class="settings-value">Not set</span>
+            </div>
+            <div id="stage-duration-control" class="settings-field settings-field-inline settings-field-readonly">
+              <span>Stage Duration</span>
+              <span id="stage-duration-value" class="settings-value">0 weeks</span>
+            </div>
+            <label class="settings-field settings-field-checkbox" for="snap-to-week-input">
+              <input id="snap-to-week-input" type="checkbox" />
+              <span>Enable Snapping</span>
+            </label>
+            <label class="settings-field settings-field-checkbox" for="collapse-all-lanes-input">
+              <input id="collapse-all-lanes-input" type="checkbox" />
+              <span>Collapse All Swimlanes</span>
+            </label>
+            <label class="settings-field settings-field-checkbox" for="show-critical-path-input">
+              <input id="show-critical-path-input" type="checkbox" />
+              <span>Show Critical Path</span>
+            </label>
+            <label class="settings-field settings-field-checkbox" for="hide-neutral-links-input">
+              <input id="hide-neutral-links-input" type="checkbox" />
+              <span>Hide Grey Links</span>
+            </label>
+            <label class="settings-field settings-field-slider" for="neutral-link-width-input">
+              <span>Grey Line Thickness</span>
+              <div class="settings-slider-row">
+                <input id="neutral-link-width-input" type="range" min="20" max="100" step="10" value="100" />
+                <span id="neutral-link-width-badge" class="zoom-badge">100%</span>
+              </div>
+            </label>
+            <label class="settings-field settings-field-slider" for="zoom-x-input">
+              <span>Horizontal Zoom</span>
+              <div class="settings-slider-row">
+                <input id="zoom-x-input" type="range" min="30" max="250" step="10" value="100" />
+                <span id="zoom-x-badge" class="zoom-badge">100%</span>
+              </div>
+            </label>
+            <label class="settings-field settings-field-slider" for="zoom-y-input">
+              <span>Vertical Zoom</span>
+              <div class="settings-slider-row">
+                <input id="zoom-y-input" type="range" min="50" max="250" step="10" value="100" />
+                <span id="zoom-y-badge" class="zoom-badge">100%</span>
+              </div>
+            </label>
+            <label class="settings-field settings-field-slider" for="note-scale-input">
+              <span>Note Scale</span>
+              <div class="settings-slider-row">
+                <input id="note-scale-input" type="range" min="50" max="200" step="10" value="100" />
+                <span id="note-scale-badge" class="zoom-badge">100%</span>
+              </div>
+            </label>
+            <div class="settings-actions-row">
+              <button id="clear-links-btn" class="settings-action-btn" type="button">Clear Links</button>
+              <button id="project-admin-page-btn" class="settings-action-btn" type="button">Project Admin Page</button>
+            </div>
+          </div>
+        </div>
         <div class="add-note-wrap prerequisite-wrap">
           <button id="prerequisite-btn" class="btn btn-prerequisite" type="button" aria-expanded="false">Prerequisites</button>
           <div id="prerequisite-menu" class="add-note-menu prerequisite-menu" hidden></div>
@@ -24,55 +92,6 @@
           <button id="add-note-btn" class="btn btn-primary" type="button" aria-expanded="false">+ Add Note</button>
           <div id="add-note-menu" class="add-note-menu" hidden></div>
         </div>
-        <button id="clear-links-btn" class="btn btn-ghost">Clear Links</button>
-        <button id="save-btn" class="btn btn-primary">💾 Save Board</button>
-        <button id="home-btn" class="btn btn-ghost" type="button">Home</button>
-        <button id="logout-btn" class="btn btn-ghost" type="button">Logout</button>
-        <button id="schedule-toggle-btn" class="btn btn-ghost" type="button" aria-expanded="false">Show Takt Schedule</button>
-        <label class="control-field" for="finish-date-input">
-          <span>Finish Date</span>
-          <input id="finish-date-input" type="date" />
-        </label>
-        <label class="control-field control-checkbox" for="snap-to-week-input">
-          <input id="snap-to-week-input" type="checkbox" />
-          <span>Enable Snapping</span>
-        </label>
-        <label class="control-field control-checkbox" for="collapse-all-lanes-input">
-          <input id="collapse-all-lanes-input" type="checkbox" />
-          <span>Collapse All Swimlanes</span>
-        </label>
-        <label class="control-field control-checkbox" for="show-critical-path-input">
-          <input id="show-critical-path-input" type="checkbox" />
-          <span>Show Critical Path</span>
-        </label>
-        <label class="control-field control-checkbox" for="hide-neutral-links-input">
-          <input id="hide-neutral-links-input" type="checkbox" />
-          <span>Hide Grey Links</span>
-        </label>
-        <label class="control-field control-zoom" for="neutral-link-width-input">
-          <span>Grey Line Thickness</span>
-          <input id="neutral-link-width-input" type="range" min="20" max="100" step="10" value="100" />
-          <span id="neutral-link-width-badge" class="zoom-badge">100%</span>
-        </label>
-        <label class="control-field" for="stage-duration-input">
-          <span>Stage Duration (weeks)</span>
-          <input id="stage-duration-input" type="number" min="1" max="260" step="1" value="26" />
-        </label>
-        <label class="control-field control-zoom" for="zoom-x-input">
-          <span>Horizontal Zoom</span>
-          <input id="zoom-x-input" type="range" min="50" max="500" step="10" value="100" />
-          <span id="zoom-x-badge" class="zoom-badge">100%</span>
-        </label>
-        <label class="control-field control-zoom" for="zoom-y-input">
-          <span>Vertical Zoom</span>
-          <input id="zoom-y-input" type="range" min="50" max="500" step="10" value="100" />
-          <span id="zoom-y-badge" class="zoom-badge">100%</span>
-        </label>
-        <label class="control-field control-zoom" for="note-scale-input">
-          <span>Note Scale</span>
-          <input id="note-scale-input" type="range" min="50" max="200" step="10" value="100" />
-          <span id="note-scale-badge" class="zoom-badge">100%</span>
-        </label>
         <span id="status" class="status" role="status" aria-live="polite">Ready</span>
       </section>
     </header>
@@ -143,6 +162,6 @@
     <script src="supabase-config.js?v=1"></script>
     <script src="data-store.js?v=1"></script>
     <script src="auth.js?v=9"></script>
-    <script src="app.js?v=10"></script>
+    <script src="app.js?v=14"></script>
   </body>
 </html>
