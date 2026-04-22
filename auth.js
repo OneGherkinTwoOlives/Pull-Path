@@ -39,6 +39,10 @@ const TSAuth = (() => {
   }
 
   function signupRedirectUrl() {
+    const configuredRedirect = String(config.authRedirectUrl || "").trim();
+    if (configuredRedirect) {
+      return configuredRedirect;
+    }
     return new URL("login.html", window.location.href).toString();
   }
 
