@@ -262,7 +262,15 @@ const TSAuth = (() => {
         };
       }
 
-      return { ok: false, message: "Your account is confirmed, but no project assignments are available yet." };
+      return {
+        ok: true,
+        session: {
+          role: "project-admin",
+          email: normalizedEmail,
+          assignments: [],
+          loginAt: new Date().toISOString(),
+        },
+      };
     }
 
     if (normalizedEmail === SUPER_ADMIN_EMAIL) {

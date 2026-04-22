@@ -148,16 +148,11 @@ function applyRoleUi() {
       adminEmailInput.value = authSession.email;
       adminEmailInput.disabled = true;
       if (adminEmailHint) {
-        adminEmailHint.textContent = "Project administrators can only manage projects assigned to their own email.";
+        adminEmailHint.textContent = "Project administrators create and manage projects assigned to their own email.";
       }
     } else {
       adminEmailInput.value = authSession.email;
     }
-  }
-
-  if (isProjectAdmin && !EDIT_PROJECT_ID) {
-    alert("Project administrators can only manage projects already assigned to them.");
-    window.location.href = defaultWorkspaceRoute();
   }
 }
 

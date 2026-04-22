@@ -8,6 +8,7 @@ const adminEmpty = document.getElementById("project-admin-empty");
 const contributorList = document.getElementById("project-contributor-project-list");
 const contributorEmpty = document.getElementById("project-contributor-empty");
 const emailEl = document.getElementById("project-admin-email");
+const createProjectBtn = document.getElementById("create-project-btn");
 
 emailEl.textContent = `Signed in as ${session.email}`;
 
@@ -88,6 +89,10 @@ function renderAssignments() {
 document.getElementById("logout-btn").addEventListener("click", () => {
   window.TSAuth.logout();
   window.location.href = "login.html";
+});
+
+createProjectBtn?.addEventListener("click", () => {
+  window.location.href = "create-project.html?v=20260405";
 });
 
 async function initializePage() {
