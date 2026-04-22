@@ -239,6 +239,154 @@ h1[contenteditable="true"]:focus {
   flex-wrap: wrap;
 }
 
+.board-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(20, 21, 24, 0.38);
+  backdrop-filter: blur(4px);
+  z-index: 500;
+}
+
+.board-modal-backdrop[hidden] {
+  display: none !important;
+}
+
+.board-modal-card {
+  width: min(560px, 92vw);
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 20px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.2);
+  padding: 1rem;
+}
+
+.board-modal-card-narrow {
+  width: min(500px, 92vw);
+}
+
+.board-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.board-modal-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.board-modal-close {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.08);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.board-modal-form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.board-modal-field {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.board-modal-field input,
+.board-modal-field select,
+.board-modal-field textarea {
+  width: 100%;
+  border: 1px solid rgba(0, 0, 0, 0.16);
+  border-radius: 12px;
+  padding: 0.65rem 0.75rem;
+  font: inherit;
+  background: #fff;
+}
+
+.board-modal-field textarea {
+  resize: vertical;
+}
+
+.board-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.board-modal-primary,
+.board-modal-secondary {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.6rem 0.95rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.board-modal-primary {
+  background: rgb(57, 91, 84);
+  color: #fff;
+}
+
+.board-modal-secondary {
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--ink);
+}
+
+.board-modal-copy {
+  font-size: 0.94rem;
+  line-height: 1.45;
+  color: rgba(20, 21, 24, 0.88);
+  margin-bottom: 0.9rem;
+}
+
+.board-feedback-entry + .board-feedback-entry {
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.board-feedback-entry h3 {
+  margin: 0 0 0.3rem;
+  font-size: 0.92rem;
+}
+
+.board-feedback-entry p {
+  margin: 0;
+}
+
+.board-feedback-actions {
+  margin-top: 0.7rem;
+}
+
+.board-feedback-rescind-btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.45rem 0.8rem;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #fff;
+  background: #b91c1c;
+  cursor: pointer;
+}
+
+.board-feedback-rescind-btn:hover {
+  background: #991b1b;
+}
+
 .add-note-menu-btn {
   border: 0;
   border-radius: 9px;
@@ -856,6 +1004,26 @@ main {
   animation: note-pop 260ms ease;
 }
 
+.note-feedback-indicator {
+  position: absolute;
+  top: 0.55rem;
+  right: 2.45rem;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 50%;
+  background: #b91c1c;
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.8rem;
+  line-height: 1;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1;
+}
+
 .note-collapsed-row {
   display: none;
   align-items: center;
@@ -948,7 +1116,8 @@ main {
 .note.collapsed .note-content,
 .note.collapsed .note-duration,
 .note.collapsed .note-predecessors,
-.note.collapsed .note-link {
+.note.collapsed .note-request-meta,
+.note.collapsed .note-action-cluster {
   display: none;
 }
 
@@ -985,8 +1154,14 @@ main {
 .note.deliverable-note .note-collapsed-row,
 .note.deliverable-note .note-duration,
 .note.deliverable-note .note-predecessors,
-.note.deliverable-note .note-link {
+.note.deliverable-note .note-request-meta,
+.note.deliverable-note .note-action-cluster {
   display: none;
+}
+
+.note.suggested-note .note-order,
+.note.suggested-note .note-collapsed-order {
+  background: rgba(127, 29, 29, 0.95);
 }
 
 .note-topbar {
@@ -1044,7 +1219,7 @@ main {
 
 .note-content {
   margin-top: 0.35rem;
-  padding-bottom: 5rem;
+  padding-bottom: 6.2rem;
   min-height: 92px;
   font-family: "Permanent Marker", cursive;
   font-size: 1.03rem;
@@ -1073,7 +1248,7 @@ main {
   position: absolute;
   left: 0.6rem;
   right: 2.6rem;
-  bottom: 0.7rem;
+  bottom: 2.8rem;
   font-size: 0.68rem;
   color: #6b7280;
   line-height: 1.22;
@@ -1089,15 +1264,77 @@ main {
   padding-left: 1.35rem;
 }
 
-.note-link {
+.note-request-meta {
+  position: absolute;
+  left: 0.6rem;
+  right: 3.9rem;
+  bottom: 0.65rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+}
+
+.note-memo-link {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.note-memo-link.has-memo {
+  color: #111;
+}
+
+.note-memo-link.no-memo {
+  color: #9ca3af;
+}
+
+.note-review-actions {
+  display: none;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.note-accept-btn,
+.note-decline-btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.28rem 0.55rem;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.note-accept-btn {
+  background: rgb(57, 91, 84);
+  color: #fff;
+}
+
+.note-decline-btn {
+  background: rgba(185, 28, 28, 0.12);
+  color: #991b1b;
+}
+
+.note-action-cluster {
   position: absolute;
   right: 0.6rem;
   bottom: 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.note-request,
+.note-link {
   width: 28px;
   height: 28px;
   border: 0;
   border-radius: 50%;
-  background: rgba(32, 86, 118, 0.9);
   color: #fff;
   cursor: pointer;
   font-size: 0.95rem;
@@ -1107,8 +1344,22 @@ main {
   justify-content: center;
 }
 
+.note-link {
+  background: rgba(32, 86, 118, 0.9);
+}
+
 .note-link:hover {
   background: rgba(16, 43, 59, 0.95);
+}
+
+.note-request {
+  background: rgba(185, 28, 28, 0.92);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.note-request:hover {
+  background: rgba(127, 29, 29, 0.96);
 }
 
 .duration-btn {

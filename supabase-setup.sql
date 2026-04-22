@@ -30,9 +30,23 @@ create table if not exists public.admin_accounts (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.user_profiles (
+  email text primary key,
+  auth_user_id uuid,
+  full_name text not null,
+  company text not null,
+  discipline_trade text not null,
+  phone_number text,
+  address text,
+  confirmed_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 alter table public.projects enable row level security;
 alter table public.board_states enable row level security;
 alter table public.admin_accounts enable row level security;
+alter table public.user_profiles enable row level security;
 
 drop policy if exists "Prototype full access projects" on public.projects;
 create policy "Prototype full access projects"
@@ -53,6 +67,14 @@ create policy "Prototype full access board states"
 drop policy if exists "Prototype full access admin accounts" on public.admin_accounts;
 create policy "Prototype full access admin accounts"
   on public.admin_accounts
+  for all
+  to anon, authenticated
+  using (true)
+  with check (true);
+
+drop policy if exists "Prototype full access user profiles" on public.user_profiles;
+create policy "Prototype full access user profiles"
+  on public.user_profiles
   for all
   to anon, authenticated
   using (true)

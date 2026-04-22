@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="portal.css?v=2" />
+    <link rel="stylesheet" href="portal.css?v=3" />
   </head>
   <body class="login-page">
     <main class="portal-main">
@@ -29,16 +29,80 @@
               <button class="primary-btn" type="submit">Login</button>
             </div>
           </form>
+          <div class="login-signup-divider" aria-hidden="true"></div>
+          <div class="login-signup-prompt">
+            <p class="muted">Create an account to start Pull Planning your project</p>
+            <button id="open-signup-btn" class="secondary-btn" type="button">Create Account</button>
+          </div>
         </div>
         <div class="login-right" aria-hidden="true">
           <img class="login-logo" src="Logo-Vector.png" alt="Pull Path" />
         </div>
       </section>
     </main>
+    <div id="signup-modal" class="modal-backdrop" hidden>
+      <div class="modal-card signup-modal-card">
+        <div class="modal-header">
+          <div>
+            <h2>Create Account</h2>
+            <p class="muted">Confirm your email to activate your Pull Path account.</p>
+          </div>
+          <button id="close-signup-btn" class="modal-close-btn" type="button" aria-label="Close create account dialog">×</button>
+        </div>
+        <form id="signup-form" class="project-form">
+          <div class="field-row signup-grid-row">
+            <label class="field">
+              <span>Company*</span>
+              <input id="signup-company" type="text" required />
+            </label>
+            <label class="field">
+              <span>Discipline/Trade*</span>
+              <input id="signup-discipline" type="text" required />
+            </label>
+          </div>
+          <div class="field-row signup-grid-row">
+            <label class="field">
+              <span>Name*</span>
+              <input id="signup-name" type="text" required />
+            </label>
+            <label class="field">
+              <span>Email*</span>
+              <input id="signup-email" type="email" required />
+            </label>
+          </div>
+          <div class="field-row signup-grid-row">
+            <label class="field">
+              <span>Phone Number</span>
+              <input id="signup-phone" type="tel" />
+            </label>
+            <label class="field">
+              <span>Address</span>
+              <input id="signup-address" type="text" />
+            </label>
+          </div>
+          <div class="field-row signup-grid-row">
+            <label class="field">
+              <span>Password*</span>
+              <input id="signup-password" type="password" required />
+            </label>
+            <label class="field">
+              <span>Confirm Password*</span>
+              <input id="signup-confirm-password" type="password" required />
+            </label>
+          </div>
+          <p class="field-hint">Password must be at least 6 characters and include one capital letter and one symbol.</p>
+          <div id="signup-status" class="csv-status" aria-live="polite"></div>
+          <div class="actions-row auth-actions">
+            <button id="cancel-signup-btn" class="secondary-btn" type="button">Cancel</button>
+            <button class="primary-btn" type="submit">Create Account</button>
+          </div>
+        </form>
+      </div>
+    </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-config.js"></script>
-    <script src="data-store.js"></script>
-    <script src="auth.js"></script>
-    <script src="login.js"></script>
+    <script src="supabase-config.js?v=1"></script>
+    <script src="data-store.js?v=2"></script>
+    <script src="auth.js?v=10"></script>
+    <script src="login.js?v=2"></script>
   </body>
 </html>

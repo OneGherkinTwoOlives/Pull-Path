@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="portal.css?v=2" />
+    <link rel="stylesheet" href="portal.css?v=3" />
   </head>
   <body>
     <main class="portal-main">
@@ -22,9 +22,16 @@
             </div>
           </div>
           <p id="project-admin-email" class="muted"></p>
-          <h2>Managed Projects</h2>
-          <ul id="project-admin-project-list" class="project-list"></ul>
-          <p id="project-admin-empty" class="muted">No projects are assigned to this administrator.</p>
+          <section class="workspace-section">
+            <h2>Admin Projects</h2>
+            <ul id="project-admin-project-list" class="project-list"></ul>
+            <p id="project-admin-empty" class="muted">No projects are assigned to this administrator.</p>
+          </section>
+          <section class="workspace-section">
+            <h2>Contributor Projects</h2>
+            <ul id="project-contributor-project-list" class="project-list"></ul>
+            <p id="project-contributor-empty" class="muted">No contributor projects are assigned to this user.</p>
+          </section>
         </section>
       </div>
     </main>

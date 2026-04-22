@@ -3,32 +3,32 @@ if (!session) {
   throw new Error("Unauthorized");
 }
 
-const list = document.getElementById("project-admin-project-list");
-const empty = document.getElementById("project-admin-empty");
+const adminList = document.getElementById("project-admin-project-list");
+const adminEmpty = document.getElementById("project-admin-empty");
+const contributorList = document.getElementById("project-contributor-project-list");
+const contributorEmpty = document.getElementById("project-contributor-empty");
 const emailEl = document.getElementById("project-admin-email");
 
 emailEl.textContent = `Signed in as ${session.email}`;
 
-function renderAssignments() {
-  const assignments = window.TSAuth.projectAdminAssignments(session.email);
-  list.innerHTML = "";
-  empty.style.display = assignments.length === 0 ? "block" : "none";
+function renderProjectRow(assignment, options = {}) {
+  const { showManage = false, subtitle } = options;
+  const li = document.createElement("li");
+  const row = document.createElement("div");
+  row.className = "project-item-row";
 
-  assignments.forEach((assignment) => {
-    const li = document.createElement("li");
-    const row = document.createElement("div");
-    row.className = "project-item-row";
+  const openBtn = document.createElement("button");
+  openBtn.type = "button";
+  openBtn.className = "project-item-btn";
+  openBtn.innerHTML = `<strong>${assignment.projectName}</strong><br><span class="muted">${subtitle}</span>`;
+  openBtn.addEventListener("click", () => {
+    localStorage.setItem("ts-active-project-id", assignment.projectId);
+    window.location.href = `board.html?projectId=${encodeURIComponent(assignment.projectId)}`;
+  });
 
-    const openBtn = document.createElement("button");
-    openBtn.type = "button";
-    openBtn.className = "project-item-btn";
-    const disciplines = Array.isArray(assignment.disciplines) ? assignment.disciplines : [];
-    openBtn.innerHTML = `<strong>${assignment.projectName}</strong><br><span class="muted">${disciplines.length} disciplines</span>`;
-    openBtn.addEventListener("click", () => {
-      localStorage.setItem("ts-active-project-id", assignment.projectId);
-      window.location.href = `board.html?projectId=${encodeURIComponent(assignment.projectId)}`;
-    });
+  row.appendChild(openBtn);
 
+  if (showManage) {
     const manageBtn = document.createElement("button");
     manageBtn.type = "button";
     manageBtn.className = "admin-btn";
@@ -36,11 +36,51 @@ function renderAssignments() {
     manageBtn.addEventListener("click", () => {
       window.location.href = `create-project.html?projectId=${encodeURIComponent(assignment.projectId)}&v=20260405`;
     });
-
-    row.appendChild(openBtn);
     row.appendChild(manageBtn);
-    li.appendChild(row);
-    list.appendChild(li);
+  }
+
+  li.appendChild(row);
+  return li;
+}
+
+function renderAssignments() {
+  const adminAssignments = window.TSAuth.projectAdminAssignments(session.email);
+  const contributorAssignments = window.TSAuth.consultantAssignments(session.email);
+  const adminProjectIds = new Set(adminAssignments.map((assignment) => assignment.projectId));
+  const contributorProjectMap = new Map();
+
+  contributorAssignments.forEach((assignment) => {
+    if (adminProjectIds.has(assignment.projectId)) {
+      return;
+    }
+    if (!contributorProjectMap.has(assignment.projectId)) {
+      contributorProjectMap.set(assignment.projectId, {
+        projectId: assignment.projectId,
+        projectName: assignment.projectName,
+        disciplines: [],
+      });
+    }
+    contributorProjectMap.get(assignment.projectId).disciplines.push(assignment.discipline);
+  });
+
+  adminList.innerHTML = "";
+  contributorList.innerHTML = "";
+  adminEmpty.style.display = adminAssignments.length === 0 ? "block" : "none";
+  contributorEmpty.style.display = contributorProjectMap.size === 0 ? "block" : "none";
+
+  adminAssignments.forEach((assignment) => {
+    const disciplines = Array.isArray(assignment.disciplines) ? assignment.disciplines : [];
+    adminList.appendChild(renderProjectRow(assignment, {
+      showManage: true,
+      subtitle: `${disciplines.length} disciplines`,
+    }));
+  });
+
+  contributorProjectMap.forEach((assignment) => {
+    const uniqueDisciplines = [...new Set(assignment.disciplines)];
+    contributorList.appendChild(renderProjectRow(assignment, {
+      subtitle: uniqueDisciplines.join(", "),
+    }));
   });
 }
 

@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;700&family=Permanent+Marker&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=12" />
+    <link rel="stylesheet" href="styles.css?v=13" />
   </head>
   <body>
     <header class="app-header">
@@ -140,6 +140,7 @@
           <span class="note-collapsed-text"></span>
           <span class="note-collapsed-duration"></span>
         </div>
+        <button class="note-feedback-indicator" type="button" title="View declined request feedback" aria-label="View declined request feedback">!</button>
         <div class="note-topbar">
           <div class="note-meta">
             <span class="note-order"></span>
@@ -153,15 +154,84 @@
           <button class="duration-btn duration-down" type="button" aria-label="Decrease duration">▼</button>
         </div>
         <div class="note-predecessors" aria-live="polite"></div>
-        <button class="note-link" type="button" title="Link note" aria-label="Link note">🔗</button>
+        <div class="note-request-meta">
+          <button class="note-memo-link" type="button">Memo</button>
+          <div class="note-review-actions">
+            <button class="note-accept-btn" type="button">Accept</button>
+            <button class="note-decline-btn" type="button">Decline</button>
+          </div>
+        </div>
+        <div class="note-action-cluster">
+          <button class="note-request" type="button" title="Suggest predecessor task" aria-label="Suggest predecessor task">&lt;&gt;</button>
+          <button class="note-link" type="button" title="Link note" aria-label="Link note">🔗</button>
+        </div>
         <div class="note-content" contenteditable="true" spellcheck="true">New idea...</div>
       </article>
     </template>
+
+    <div id="suggestion-modal" class="board-modal-backdrop" hidden>
+      <div class="board-modal-card">
+        <div class="board-modal-header">
+          <h2>Suggest Predecessor Task</h2>
+          <button id="suggestion-modal-close" class="board-modal-close" type="button" aria-label="Close suggestion dialog">×</button>
+        </div>
+        <form id="suggestion-form" class="board-modal-form">
+          <label class="board-modal-field" for="suggestion-discipline-select">
+            <span>Discipline</span>
+            <select id="suggestion-discipline-select" required></select>
+          </label>
+          <label class="board-modal-field" for="suggestion-task-input">
+            <span>Task Suggestion</span>
+            <input id="suggestion-task-input" type="text" maxlength="160" required />
+          </label>
+          <label class="board-modal-field" for="suggestion-memo-input">
+            <span>Memo</span>
+            <textarea id="suggestion-memo-input" rows="4" maxlength="1000"></textarea>
+          </label>
+          <div class="board-modal-actions">
+            <button id="suggestion-cancel-btn" class="board-modal-secondary" type="button">Cancel</button>
+            <button class="board-modal-primary" type="submit">Submit</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="memo-modal" class="board-modal-backdrop" hidden>
+      <div class="board-modal-card board-modal-card-narrow">
+        <div class="board-modal-header">
+          <h2 id="memo-modal-title">Memo</h2>
+          <button id="memo-modal-close" class="board-modal-close" type="button" aria-label="Close memo dialog">×</button>
+        </div>
+        <div id="memo-modal-body" class="board-modal-copy"></div>
+        <div class="board-modal-actions">
+          <button id="memo-modal-dismiss" class="board-modal-primary" type="button">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="decline-modal" class="board-modal-backdrop" hidden>
+      <div class="board-modal-card board-modal-card-narrow">
+        <div class="board-modal-header">
+          <h2>Decline Suggested Task</h2>
+          <button id="decline-modal-close" class="board-modal-close" type="button" aria-label="Close decline dialog">×</button>
+        </div>
+        <form id="decline-form" class="board-modal-form">
+          <label class="board-modal-field" for="decline-reason-input">
+            <span>Explanation</span>
+            <textarea id="decline-reason-input" rows="4" maxlength="1000" required></textarea>
+          </label>
+          <div class="board-modal-actions">
+            <button id="decline-cancel-btn" class="board-modal-secondary" type="button">Cancel</button>
+            <button class="board-modal-primary" type="submit">Submit</button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js?v=1"></script>
     <script src="data-store.js?v=1"></script>
     <script src="auth.js?v=9"></script>
-    <script src="app.js?v=14"></script>
+    <script src="app.js?v=15"></script>
   </body>
 </html>

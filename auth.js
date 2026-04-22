@@ -3,6 +3,10 @@ const TSAuth = (() => {
   const PROJECTS_KEY = "ts-projects";
   const SUPER_ADMIN_EMAIL = "tschmitt@marcon.ca";
   const DEFAULT_PASSWORD = "123";
+  const PASSWORD_RULE = /^(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{6,}$/;
+  const config = window.TSSupabaseConfig || {};
+  const isSupabaseConfigured = !!(window.supabase && config.url && config.anonKey);
+  const supabaseClient = isSupabaseConfigured ? window.supabase.createClient(config.url, config.anonKey) : null;
 
   function canonicalRole(role) {
     if (role === "admin") {
@@ -28,6 +32,28 @@ const TSAuth = (() => {
 
   function normalizeEmail(email) {
     return String(email || "").trim().toLowerCase();
+  }
+
+  function passwordMeetsRequirements(password) {
+    return PASSWORD_RULE.test(String(password || ""));
+  }
+
+  function signupRedirectUrl() {
+    return new URL("login.html", window.location.href).toString();
+  }
+
+  function formatSupabaseAuthError(error) {
+    const message = String(error?.message || "").toLowerCase();
+    if (message.includes("email not confirmed") || message.includes("email_not_confirmed")) {
+      return "Please confirm your email address before logging in.";
+    }
+    if (message.includes("invalid login credentials")) {
+      return "Invalid email or password.";
+    }
+    if (message.includes("user already registered")) {
+      return "An account already exists for this email address.";
+    }
+    return error?.message || "Authentication failed.";
   }
 
   function loadProjects() {
@@ -116,11 +142,123 @@ const TSAuth = (() => {
     return account?.password || DEFAULT_PASSWORD;
   }
 
+  async function signUpAccount(details) {
+    if (!supabaseClient || !window.TSData?.saveUserProfile) {
+      throw new Error("Supabase authentication is not configured.");
+    }
+
+    const normalizedEmail = normalizeEmail(details?.email);
+    const password = String(details?.password || "");
+    if (!normalizedEmail) {
+      throw new Error("Email is required.");
+    }
+    if (!passwordMeetsRequirements(password)) {
+      throw new Error("Password must be at least 6 characters and include one capital letter and one symbol.");
+    }
+
+    const { data, error } = await supabaseClient.auth.signUp({
+      email: normalizedEmail,
+      password,
+      options: {
+        emailRedirectTo: signupRedirectUrl(),
+        data: {
+          full_name: details.name || "",
+          company: details.company || "",
+          discipline_trade: details.disciplineTrade || "",
+        },
+      },
+    });
+
+    if (error) {
+      throw new Error(formatSupabaseAuthError(error));
+    }
+
+    await window.TSData.saveUserProfile({
+      email: normalizedEmail,
+      authUserId: data?.user?.id || null,
+      name: String(details?.name || "").trim(),
+      company: String(details?.company || "").trim(),
+      disciplineTrade: String(details?.disciplineTrade || "").trim(),
+      phoneNumber: String(details?.phoneNumber || "").trim(),
+      address: String(details?.address || "").trim(),
+      confirmedAt: data?.user?.email_confirmed_at || null,
+      createdAt: null,
+    });
+
+    return {
+      ok: true,
+      message: "Check your email for a confirmation link before logging in.",
+    };
+  }
+
   async function authenticate(email, password) {
     const normalizedEmail = normalizeEmail(email);
 
     if (window.TSData?.initialize) {
       await window.TSData.initialize();
+    }
+
+    const existingProfile = window.TSData?.fetchUserProfile
+      ? await window.TSData.fetchUserProfile(normalizedEmail)
+      : null;
+
+    if (existingProfile && supabaseClient) {
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email: normalizedEmail,
+        password,
+      });
+
+      if (error) {
+        return { ok: false, message: formatSupabaseAuthError(error) };
+      }
+
+      if (window.TSData?.saveUserProfile) {
+        await window.TSData.saveUserProfile({
+          ...existingProfile,
+          authUserId: data?.user?.id || existingProfile.authUserId || null,
+          confirmedAt: data?.user?.email_confirmed_at || existingProfile.confirmedAt || null,
+          createdAt: existingProfile.createdAt || null,
+        });
+      }
+
+      if (normalizedEmail === SUPER_ADMIN_EMAIL) {
+        return {
+          ok: true,
+          session: {
+            role: "super-admin",
+            email: normalizedEmail,
+            loginAt: new Date().toISOString(),
+          },
+        };
+      }
+
+      const signedInProjectAdminProjects = projectAdminAssignments(normalizedEmail);
+      if (signedInProjectAdminProjects.length > 0) {
+        return {
+          ok: true,
+          session: {
+            role: "project-admin",
+            email: normalizedEmail,
+            assignments: signedInProjectAdminProjects,
+            loginAt: new Date().toISOString(),
+          },
+        };
+      }
+
+      const signedInAssignments = consultantAssignments(normalizedEmail);
+      if (signedInAssignments.length > 0) {
+        return {
+          ok: true,
+          session: {
+            role: "consultant",
+            email: normalizedEmail,
+            assignments: signedInAssignments,
+            loginAt: new Date().toISOString(),
+          },
+        };
+      }
+
+      return { ok: false, message: "Your account is confirmed, but no project assignments are available yet." };
     }
 
     if (normalizedEmail === SUPER_ADMIN_EMAIL) {
@@ -199,7 +337,9 @@ const TSAuth = (() => {
     ADMIN_EMAIL: SUPER_ADMIN_EMAIL,
     SUPER_ADMIN_EMAIL,
     DEFAULT_PASSWORD,
+    passwordMeetsRequirements,
     authenticate,
+    signUpAccount,
     resolveAdminAccount,
     consultantAssignments,
     projectAdminAssignments,

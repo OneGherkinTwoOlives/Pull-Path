@@ -40,8 +40,23 @@ const statusEl = document.getElementById("status");
 const stageStartLine = document.getElementById("stage-start-line");
 const stageFinishLine = document.getElementById("stage-finish-line");
 const swimLanesLayer = document.getElementById("swim-lanes-layer");
-const finishDateControl = document.getElementById("finish-date-control");
-const stageDurationControl = document.getElementById("stage-duration-control");
+const suggestionModal = document.getElementById("suggestion-modal");
+const suggestionForm = document.getElementById("suggestion-form");
+const suggestionDisciplineSelect = document.getElementById("suggestion-discipline-select");
+const suggestionTaskInput = document.getElementById("suggestion-task-input");
+const suggestionMemoInput = document.getElementById("suggestion-memo-input");
+const suggestionModalCloseBtn = document.getElementById("suggestion-modal-close");
+const suggestionCancelBtn = document.getElementById("suggestion-cancel-btn");
+const memoModal = document.getElementById("memo-modal");
+const memoModalTitle = document.getElementById("memo-modal-title");
+const memoModalBody = document.getElementById("memo-modal-body");
+const memoModalCloseBtn = document.getElementById("memo-modal-close");
+const memoModalDismissBtn = document.getElementById("memo-modal-dismiss");
+const declineModal = document.getElementById("decline-modal");
+const declineForm = document.getElementById("decline-form");
+const declineReasonInput = document.getElementById("decline-reason-input");
+const declineModalCloseBtn = document.getElementById("decline-modal-close");
+const declineCancelBtn = document.getElementById("decline-cancel-btn");
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
@@ -60,6 +75,7 @@ const isProjectAdmin = authSession.role === "project-admin";
 const currentUserKey = window.TSAuth.normalizeEmail(authSession.email);
 let consultantLaneIds = [];
 let currentProject = null;
+let isProjectContributor = false;
 
 const DISCIPLINE_SHORT_NAMES = {
   architect: "Arch",
@@ -136,6 +152,8 @@ const state = {
 };
 
 let dragState = null;
+let pendingSuggestionSourceNoteId = null;
+let pendingDeclineNoteId = null;
 
 function setStatus(message) {
   statusEl.textContent = message;
@@ -166,6 +184,15 @@ function formatFinishDate(ms) {
   });
 }
 
+function escapeHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
 function updateProjectSettingDisplays() {
   if (finishDateValue) {
     finishDateValue.textContent = formatFinishDate(state.finishDateMs);
@@ -175,6 +202,116 @@ function updateProjectSettingDisplays() {
     const weeks = Math.round(state.stageDurationWeeks) || 0;
     stageDurationValue.textContent = `${weeks} ${weeks === 1 ? "week" : "weeks"}`;
   }
+}
+
+function isSuggestedNote(note) {
+  return (note?.kind || "task") === "suggested";
+}
+
+function normalizeDeclineFeedback(items) {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+
+  return items
+    .map((item) => ({
+      id: item?.id || uid("decline"),
+      sourceNoteId: item?.sourceNoteId || null,
+      laneId: item?.laneId || null,
+      laneName: item?.laneName || "",
+      taskText: String(item?.taskText || "").trim(),
+      memo: String(item?.memo || "").trim(),
+      createdAt: item?.createdAt || new Date().toISOString(),
+    }))
+    .filter((item) => item.memo);
+}
+
+function otherLaneOptions(sourceLaneId) {
+  return SWIM_LANES.filter((lane) => lane.id !== sourceLaneId);
+}
+
+function closeSuggestionModal() {
+  if (!suggestionModal) {
+    return;
+  }
+  suggestionModal.hidden = true;
+  pendingSuggestionSourceNoteId = null;
+  suggestionForm?.reset();
+}
+
+function openSuggestionModal(sourceNoteId) {
+  const sourceNote = state.notes.get(sourceNoteId);
+  if (!sourceNote || !suggestionModal || !suggestionDisciplineSelect) {
+    return;
+  }
+
+  const options = otherLaneOptions(sourceNote.lane || SWIM_LANES[0].id);
+  if (options.length === 0) {
+    setStatus("No other disciplines are available on this board.");
+    return;
+  }
+
+  pendingSuggestionSourceNoteId = sourceNoteId;
+  suggestionDisciplineSelect.innerHTML = "";
+  options.forEach((lane) => {
+    const option = document.createElement("option");
+    option.value = lane.id;
+    option.textContent = lane.name;
+    suggestionDisciplineSelect.appendChild(option);
+  });
+  if (suggestionTaskInput) {
+    suggestionTaskInput.value = "";
+  }
+  if (suggestionMemoInput) {
+    suggestionMemoInput.value = "";
+  }
+  suggestionModal.hidden = false;
+  suggestionTaskInput?.focus();
+}
+
+function closeMemoModal() {
+  if (!memoModal) {
+    return;
+  }
+  memoModal.hidden = true;
+  if (memoModalTitle) {
+    memoModalTitle.textContent = "Memo";
+  }
+  if (memoModalBody) {
+    memoModalBody.innerHTML = "";
+  }
+}
+
+function openMemoModal(title, bodyHtml) {
+  if (!memoModal || !memoModalBody) {
+    return;
+  }
+  if (memoModalTitle) {
+    memoModalTitle.textContent = title;
+  }
+  memoModalBody.innerHTML = bodyHtml;
+  memoModal.hidden = false;
+}
+
+function closeDeclineModal() {
+  if (!declineModal) {
+    return;
+  }
+  declineModal.hidden = true;
+  pendingDeclineNoteId = null;
+  declineForm?.reset();
+}
+
+function openDeclineModal(noteId) {
+  if (!declineModal) {
+    return;
+  }
+  pendingDeclineNoteId = noteId;
+  if (declineReasonInput) {
+    declineReasonInput.value = "";
+  }
+  declineModal.hidden = false;
+  declineReasonInput?.focus();
 }
 
 function updateNeutralLinkControls() {
@@ -226,8 +363,12 @@ async function saveProjects(projects) {
   localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
 }
 
+function hasLaneRestrictedAccess() {
+  return isConsultant || isProjectContributor;
+}
+
 function canEditNote(note) {
-  if (!isConsultant) {
+  if (!hasLaneRestrictedAccess()) {
     return true;
   }
   const laneId = note?.lane || SWIM_LANES[0].id;
@@ -235,14 +376,14 @@ function canEditNote(note) {
 }
 
 function defaultAddLaneId() {
-  if (!isConsultant) {
+  if (!hasLaneRestrictedAccess()) {
     return SWIM_LANES[0].id;
   }
   return consultantLaneIds[0] || SWIM_LANES[0].id;
 }
 
 function applyRoleUi() {
-  if (!isConsultant) {
+  if (!hasLaneRestrictedAccess()) {
     return;
   }
 
@@ -267,25 +408,33 @@ async function configureSwimLanesFromProject() {
   const projectId = getProjectIdFromLocation();
   const project = loadProjects().find((item) => item.id === projectId);
   currentProject = project || null;
+  isProjectContributor = false;
+  consultantLaneIds = [];
+
+  const team = Array.isArray(project?.team) ? project.team : [];
+  const assignedLaneIds = [...new Set(
+    team
+      .filter((member) => window.TSAuth.normalizeEmail(member.email) === authSession.email)
+      .map((member) => slugify(member.discipline))
+      .filter(Boolean),
+  )];
 
   if (isProjectAdmin) {
     const admins = Array.isArray(project?.projectAdmins) ? project.projectAdmins : [];
     const canManageProject = admins.some((email) => window.TSAuth.normalizeEmail(email) === authSession.email);
     if (!canManageProject) {
-      alert("You are not assigned as an administrator for this project.");
-      window.location.href = "project-admin-workspace.html";
-      return;
+      if (!assignedLaneIds.length) {
+        alert("You are not assigned to this project.");
+        window.location.href = "project-admin-workspace.html";
+        return;
+      }
+      isProjectContributor = true;
+      consultantLaneIds = assignedLaneIds;
     }
   }
 
   if (isConsultant) {
-    const team = Array.isArray(project?.team) ? project.team : [];
-    consultantLaneIds = [...new Set(
-      team
-        .filter((member) => window.TSAuth.normalizeEmail(member.email) === authSession.email)
-        .map((member) => slugify(member.discipline))
-        .filter(Boolean),
-    )];
+    consultantLaneIds = assignedLaneIds;
 
     if (!consultantLaneIds.length) {
       alert("You are not assigned to this project.");
@@ -382,7 +531,7 @@ function populateAddNoteMenu() {
   }
 
   addNoteMenu.innerHTML = "";
-  const allowedLanes = isConsultant
+  const allowedLanes = hasLaneRestrictedAccess()
     ? SWIM_LANES.filter((lane) => consultantLaneIds.includes(lane.id))
     : SWIM_LANES;
 
@@ -418,7 +567,7 @@ function populatePrerequisiteMenu() {
   }
 
   prerequisiteMenu.innerHTML = "";
-  const allowedLanes = isConsultant
+  const allowedLanes = hasLaneRestrictedAccess()
     ? SWIM_LANES.filter((lane) => consultantLaneIds.includes(lane.id))
     : SWIM_LANES;
 
@@ -466,6 +615,9 @@ function serializeState() {
       lane: note.lane,
       importedFromCsv: !!note.importedFromCsv,
       importedFileName: note.importedFileName || null,
+      requestSourceNoteId: note.requestSourceNoteId || null,
+      requestMemo: note.requestMemo || "",
+      requestDeclines: normalizeDeclineFeedback(note.requestDeclines),
     }));
 
   return {
@@ -613,6 +765,9 @@ function applyLoadedState(loaded, loadedView = null) {
         lane: noteData.lane || SWIM_LANES[0].id,
         importedFromCsv: !!noteData.importedFromCsv,
         importedFileName: noteData.importedFileName || null,
+        requestSourceNoteId: noteData.requestSourceNoteId || null,
+        requestMemo: noteData.requestMemo || "",
+        requestDeclines: normalizeDeclineFeedback(noteData.requestDeclines),
       });
     });
   }
@@ -1517,7 +1672,7 @@ function applySchedulePredecessors(noteId, predecessorNumbers) {
   }
 
   const noteKind = (targetNote.kind || "task");
-  if (noteKind === "prerequisite" || noteKind === "deliverable") {
+  if (noteKind === "prerequisite" || noteKind === "deliverable" || noteKind === "suggested") {
     setStatus("This note type cannot have predecessors.");
     return;
   }
@@ -1574,6 +1729,7 @@ function renderScheduleTable() {
   orderedNotes.forEach((note) => {
     const row = document.createElement("tr");
     const isPrerequisite = (note.kind || "task") === "prerequisite";
+    const isSuggested = isSuggestedNote(note);
     const startMs = isPrerequisite ? null : xToTimestamp(noteStartX(note));
     const endMs = isPrerequisite ? null : xToTimestamp(noteEndX(note));
     const predecessorsValue = predecessorNumbersForNote(note.id).join(", ");
@@ -1595,9 +1751,9 @@ function renderScheduleTable() {
     const predecessorInput = document.createElement("input");
     predecessorInput.type = "text";
     predecessorInput.className = "schedule-predecessor-input";
-    predecessorInput.placeholder = isPrerequisite ? "N/A" : "e.g. 10, 12";
+    predecessorInput.placeholder = isPrerequisite || isSuggested ? "N/A" : "e.g. 10, 12";
     predecessorInput.value = predecessorsValue;
-    predecessorInput.disabled = isPrerequisite;
+    predecessorInput.disabled = isPrerequisite || isSuggested;
 
     if (conflictingNotes.has(note.id)) {
       predecessorInput.classList.add("has-conflict");
@@ -1909,12 +2065,21 @@ function updateNoteElement(note) {
   const editable = canEditNote(note);
   const isPrerequisite = (note.kind || "task") === "prerequisite";
   const isDeliverable = (note.kind || "task") === "deliverable";
+  const isSuggested = isSuggestedNote(note);
   const contentEl = note.el.querySelector(".note-content");
   const deleteBtnEl = note.el.querySelector(".note-delete");
   const durationEl = note.el.querySelector(".note-duration");
   const linkBtnEl = note.el.querySelector(".note-link");
+  const requestBtnEl = note.el.querySelector(".note-request");
+  const memoBtnEl = note.el.querySelector(".note-memo-link");
+  const reviewActionsEl = note.el.querySelector(".note-review-actions");
+  const feedbackIndicatorEl = note.el.querySelector(".note-feedback-indicator");
   const topbarEl = note.el.querySelector(".note-topbar");
   const collapsedRowEl = note.el.querySelector(".note-collapsed-row");
+
+  note.el.classList.toggle("prerequisite-note", isPrerequisite);
+  note.el.classList.toggle("deliverable-note", isDeliverable);
+  note.el.classList.toggle("suggested-note", isSuggested);
 
   if (contentEl) {
     contentEl.setAttribute("contenteditable", editable && !isDeliverable ? "true" : "false");
@@ -1926,18 +2091,32 @@ function updateNoteElement(note) {
     collapsedRowEl.style.display = isDeliverable ? "none" : "";
   }
   if (deleteBtnEl) {
-    deleteBtnEl.style.display = editable && !isDeliverable ? "" : "none";
+    deleteBtnEl.style.display = editable && !isDeliverable && !isSuggested ? "" : "none";
   }
   if (durationEl) {
     durationEl.style.display = editable && !isPrerequisite && !isDeliverable ? "" : "none";
   }
   if (linkBtnEl) {
-    linkBtnEl.style.display = editable && !isPrerequisite && !isDeliverable ? "" : "none";
+    linkBtnEl.style.display = editable && !isPrerequisite && !isDeliverable && !isSuggested ? "" : "none";
+  }
+  if (requestBtnEl) {
+    requestBtnEl.style.display = editable && !isPrerequisite && !isDeliverable && !isSuggested ? "" : "none";
+  }
+  if (memoBtnEl) {
+    memoBtnEl.style.display = isSuggested ? "" : "none";
+    memoBtnEl.classList.toggle("has-memo", !!String(note.requestMemo || "").trim());
+    memoBtnEl.classList.toggle("no-memo", !String(note.requestMemo || "").trim());
+  }
+  if (reviewActionsEl) {
+    reviewActionsEl.style.display = isSuggested && editable ? "flex" : "none";
+  }
+  if (feedbackIndicatorEl) {
+    feedbackIndicatorEl.style.display = normalizeDeclineFeedback(note.requestDeclines).length ? "inline-flex" : "none";
   }
 
   const predecessorEl = note.el.querySelector(".note-predecessors");
   if (predecessorEl) {
-    predecessorEl.style.display = isPrerequisite || isDeliverable ? "none" : "";
+    predecessorEl.style.display = isPrerequisite || isDeliverable || isSuggested ? "none" : "";
   }
 
   const isExpanded = isDeliverable || state.selectedNoteId === note.id || inCriticalPath;
@@ -1991,6 +2170,8 @@ function updateNoteElement(note) {
       dateEl.textContent = "Before start";
     } else if (isDeliverable) {
       dateEl.textContent = "At finish";
+    } else if (isSuggested) {
+      dateEl.textContent = `Requested for ${getLane(note.lane).name}`;
     } else {
       dateEl.textContent = xToDateLabel(noteStartX(note));
     }
@@ -2006,6 +2187,9 @@ function updateNoteElement(note) {
     note.el.style.borderColor = "#000";
   } else if (isDeliverable) {
     note.el.style.background = "linear-gradient(165deg, #fffdfd 0%, #fff1f1 100%)";
+    note.el.style.borderColor = "#b91c1c";
+  } else if (isSuggested) {
+    note.el.style.background = "linear-gradient(165deg, #ffd8d8 0%, #f87171 100%)";
     note.el.style.borderColor = "#b91c1c";
   } else {
     note.el.style.background = `linear-gradient(165deg, rgba(255,255,255,0.5) 0%, rgba(${r},${g},${b},0.92) 100%)`;
@@ -2200,7 +2384,8 @@ function deleteLink(linkId) {
   }
 }
 
-function deleteNote(noteId) {
+function deleteNote(noteId, options = {}) {
+  const { skipSave = false, skipStatus = false, skipCascade = false } = options;
   const note = state.notes.get(noteId);
   if (!note) {
     return;
@@ -2219,14 +2404,158 @@ function deleteNote(noteId) {
     state.selectedNoteId = null;
   }
 
+  if (!skipCascade) {
+    [...state.notes.values()]
+      .filter((item) => isSuggestedNote(item) && item.requestSourceNoteId === noteId)
+      .forEach((item) => deleteNote(item.id, { skipSave: true, skipStatus: true, skipCascade: true }));
+  }
+
   renderLinks();
-  saveState();
-  setStatus("Note deleted.");
+  if (!skipSave) {
+    saveState();
+  }
+  if (!skipStatus) {
+    setStatus("Note deleted.");
+  }
 }
 
 function isPrerequisiteNoteId(noteId) {
   const note = state.notes.get(noteId);
   return !!note && (note.kind || "task") === "prerequisite";
+}
+
+function isSuggestedNoteId(noteId) {
+  return isSuggestedNote(state.notes.get(noteId));
+}
+
+function showSuggestionMemo(note) {
+  const memo = String(note?.requestMemo || "").trim();
+  openMemoModal(
+    "Suggested Task Memo",
+    `<p>${memo ? escapeHtml(memo).replace(/\n/g, "<br>") : "No memo provided."}</p>`,
+  );
+}
+
+function showDeclineFeedback(note) {
+  const feedbackItems = normalizeDeclineFeedback(note?.requestDeclines);
+  if (!feedbackItems.length) {
+    openMemoModal("Decline Feedback", "<p>No decline feedback has been recorded for this task.</p>");
+    return;
+  }
+
+  const body = feedbackItems
+    .map((item) => {
+      const laneName = item.laneName || getLane(item.laneId || SWIM_LANES[0].id).name;
+      const taskText = item.taskText || "Suggested task";
+      const rescindButton = canEditNote(note)
+        ? `<div class="board-feedback-actions"><button class="board-feedback-rescind-btn" type="button" data-note-id="${escapeHtml(note.id)}" data-feedback-id="${escapeHtml(item.id)}">Recind Request</button></div>`
+        : "";
+      return `<section class="board-feedback-entry"><h3>${escapeHtml(laneName)}: ${escapeHtml(taskText)}</h3><p>${escapeHtml(item.memo).replace(/\n/g, "<br>")}</p>${rescindButton}</section>`;
+    })
+    .join("");
+
+  openMemoModal("Decline Feedback", body);
+}
+
+function rescindDeclinedRequest(noteId, feedbackId) {
+  const note = state.notes.get(noteId);
+  if (!note) {
+    return;
+  }
+
+  const nextFeedback = normalizeDeclineFeedback(note.requestDeclines).filter((item) => item.id !== feedbackId);
+  note.requestDeclines = nextFeedback;
+  updateNoteElement(note);
+  saveState();
+
+  if (nextFeedback.length === 0) {
+    closeMemoModal();
+    setStatus("Declined request rescinded.");
+    return;
+  }
+
+  showDeclineFeedback(note);
+  setStatus("Declined request rescinded.");
+}
+
+function createSuggestedNoteFromRequest(sourceNoteId, targetLaneId, taskText, memo) {
+  const sourceNote = state.notes.get(sourceNoteId);
+  if (!sourceNote) {
+    return;
+  }
+
+  const laneId = getLane(targetLaneId).id;
+  const laneTop = laneTopY(laneId);
+  const laneHeight = laneBodyHeightPx(laneId);
+  const suggestedX = Math.max(stageStartX(), noteStartX(sourceNote) - 220 * state.zoomX);
+
+  createNote({
+    x: suggestedX,
+    y: laneTop + laneHeight / 2 - 94 * noteScale(),
+    text: taskText,
+    kind: "suggested",
+    lane: laneId,
+    requestSourceNoteId: sourceNoteId,
+    requestMemo: memo,
+    requestDeclines: [],
+  });
+
+  closeSuggestionModal();
+  saveState();
+  setStatus(`${getLane(laneId).name} suggestion created.`);
+}
+
+function acceptSuggestedNote(noteId) {
+  const note = state.notes.get(noteId);
+  if (!note || !isSuggestedNote(note)) {
+    return;
+  }
+
+  note.kind = "task";
+  note.requestMemo = "";
+  const sourceNoteId = note.requestSourceNoteId;
+  note.requestSourceNoteId = null;
+  note.requestDeclines = normalizeDeclineFeedback(note.requestDeclines);
+  note.durationWeeks = clamp(Number(note.durationWeeks) || 1, MIN_DURATION_WEEKS, MAX_DURATION_WEEKS);
+
+  if (sourceNoteId && state.notes.has(sourceNoteId)) {
+    const exists = state.links.some((link) => relationshipType(link) === "FS" && link.a === note.id && link.b === sourceNoteId);
+    if (!exists) {
+      state.links.push({ id: uid("link"), a: note.id, b: sourceNoteId, type: "FS" });
+    }
+  }
+
+  enforceAllFinishStartLinks();
+  refreshLayout();
+  saveState();
+  setStatus("Suggested task accepted.");
+}
+
+function declineSuggestedNote(noteId, memo) {
+  const note = state.notes.get(noteId);
+  if (!note || !isSuggestedNote(note)) {
+    return;
+  }
+
+  const sourceNote = note.requestSourceNoteId ? state.notes.get(note.requestSourceNoteId) : null;
+  if (sourceNote) {
+    sourceNote.requestDeclines = normalizeDeclineFeedback(sourceNote.requestDeclines);
+    sourceNote.requestDeclines.push({
+      id: uid("decline"),
+      sourceNoteId: note.id,
+      laneId: note.lane,
+      laneName: getLane(note.lane).name,
+      taskText: note.text,
+      memo,
+      createdAt: new Date().toISOString(),
+    });
+    updateNoteElement(sourceNote);
+  }
+
+  deleteNote(noteId, { skipSave: true, skipStatus: true, skipCascade: true });
+  closeDeclineModal();
+  saveState();
+  setStatus("Suggested task declined.");
 }
 
 function beginLinkSelection(noteId, noteEl, event) {
@@ -2245,6 +2574,11 @@ function beginLinkSelection(noteId, noteEl, event) {
 
     if (noteKind === "deliverable") {
       setStatus("Deliverables cannot be linked.");
+      return;
+    }
+
+    if (noteKind === "suggested") {
+      setStatus("Accept the suggested task before linking it.");
       return;
     }
 
@@ -2283,6 +2617,11 @@ function beginLinkSelection(noteId, noteEl, event) {
     return;
   }
 
+  if (isSuggestedNoteId(successorId) || isSuggestedNoteId(predecessorId)) {
+    setStatus("Accept the suggested task before linking it.");
+    return;
+  }
+
   const exists = state.links.some(
     (link) =>
       (link.a === predecessorId && link.b === successorId) ||
@@ -2312,11 +2651,19 @@ function createNote({
   lane = SWIM_LANES[0].id,
   importedFromCsv = false,
   importedFileName = null,
+  requestSourceNoteId = null,
+  requestMemo = "",
+  requestDeclines = [],
 }) {
   const node = noteTemplate.content.firstElementChild.cloneNode(true);
   const content = node.querySelector(".note-content");
   const deleteBtn = node.querySelector(".note-delete");
   const linkBtn = node.querySelector(".note-link");
+  const requestBtn = node.querySelector(".note-request");
+  const memoBtn = node.querySelector(".note-memo-link");
+  const acceptBtn = node.querySelector(".note-accept-btn");
+  const declineBtn = node.querySelector(".note-decline-btn");
+  const feedbackBtn = node.querySelector(".note-feedback-indicator");
   const increaseBtn = node.querySelector(".duration-up");
   const decreaseBtn = node.querySelector(".duration-down");
 
@@ -2337,11 +2684,15 @@ function createNote({
     lane: getLane(lane).id,
     importedFromCsv: !!importedFromCsv,
     importedFileName: importedFileName || null,
+    requestSourceNoteId: requestSourceNoteId || null,
+    requestMemo: String(requestMemo || "").trim(),
+    requestDeclines: normalizeDeclineFeedback(requestDeclines),
     el: node,
   };
 
   node.classList.toggle("prerequisite-note", note.kind === "prerequisite");
   node.classList.toggle("deliverable-note", note.kind === "deliverable");
+  node.classList.toggle("suggested-note", note.kind === "suggested");
 
   content.textContent = note.text || "New idea...";
 
@@ -2374,6 +2725,59 @@ function createNote({
     setSelectedNote(noteId);
     beginLinkSelection(noteId, node, event);
   });
+
+  if (requestBtn) {
+    requestBtn.addEventListener("pointerdown", (event) => {
+      event.stopPropagation();
+      event.preventDefault();
+      if (!canEditNote(note)) {
+        setStatus("Suggest tasks from a note in your assigned discipline.");
+        return;
+      }
+      if (isSuggestedNote(note) || ["prerequisite", "deliverable"].includes(note.kind || "task")) {
+        setStatus("This note cannot request a predecessor suggestion.");
+        return;
+      }
+      setSelectedNote(noteId);
+      openSuggestionModal(noteId);
+    });
+  }
+
+  if (memoBtn) {
+    memoBtn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      showSuggestionMemo(note);
+    });
+  }
+
+  if (acceptBtn) {
+    acceptBtn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (!canEditNote(note)) {
+        setStatus("You can only review suggestions in your assigned discipline.");
+        return;
+      }
+      acceptSuggestedNote(noteId);
+    });
+  }
+
+  if (declineBtn) {
+    declineBtn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (!canEditNote(note)) {
+        setStatus("You can only review suggestions in your assigned discipline.");
+        return;
+      }
+      openDeclineModal(noteId);
+    });
+  }
+
+  if (feedbackBtn) {
+    feedbackBtn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      showDeclineFeedback(note);
+    });
+  }
 
   increaseBtn.addEventListener("click", (event) => {
     event.stopPropagation();
@@ -2413,7 +2817,7 @@ function createNote({
   });
 
   node.addEventListener("pointerdown", (event) => {
-    if (event.target.closest(".note-delete")) {
+    if (event.target.closest(".note-delete, .note-request, .note-memo-link, .note-accept-btn, .note-decline-btn, .note-feedback-indicator")) {
       return;
     }
 
@@ -2672,6 +3076,84 @@ if (settingsBtn && settingsMenu) {
 
   settingsMenu.addEventListener("pointerdown", (event) => {
     event.stopPropagation();
+  });
+}
+
+if (suggestionModal) {
+  suggestionModal.addEventListener("pointerdown", (event) => {
+    if (event.target === suggestionModal) {
+      closeSuggestionModal();
+    }
+  });
+}
+
+suggestionModalCloseBtn?.addEventListener("click", closeSuggestionModal);
+suggestionCancelBtn?.addEventListener("click", closeSuggestionModal);
+
+if (suggestionForm) {
+  suggestionForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const sourceNoteId = pendingSuggestionSourceNoteId;
+    const laneId = suggestionDisciplineSelect?.value;
+    const taskText = String(suggestionTaskInput?.value || "").trim();
+    const memo = String(suggestionMemoInput?.value || "").trim();
+
+    if (!sourceNoteId || !laneId || !taskText) {
+      setStatus("Complete the suggestion form before submitting.");
+      return;
+    }
+
+    createSuggestedNoteFromRequest(sourceNoteId, laneId, taskText, memo);
+  });
+}
+
+if (memoModal) {
+  memoModal.addEventListener("pointerdown", (event) => {
+    if (event.target === memoModal) {
+      closeMemoModal();
+    }
+  });
+}
+
+memoModalBody?.addEventListener("click", (event) => {
+  const rescindBtn = event.target.closest(".board-feedback-rescind-btn");
+  if (!rescindBtn) {
+    return;
+  }
+
+  const noteId = rescindBtn.getAttribute("data-note-id");
+  const feedbackId = rescindBtn.getAttribute("data-feedback-id");
+  if (!noteId || !feedbackId) {
+    return;
+  }
+
+  rescindDeclinedRequest(noteId, feedbackId);
+});
+
+memoModalCloseBtn?.addEventListener("click", closeMemoModal);
+memoModalDismissBtn?.addEventListener("click", closeMemoModal);
+
+if (declineModal) {
+  declineModal.addEventListener("pointerdown", (event) => {
+    if (event.target === declineModal) {
+      closeDeclineModal();
+    }
+  });
+}
+
+declineModalCloseBtn?.addEventListener("click", closeDeclineModal);
+declineCancelBtn?.addEventListener("click", closeDeclineModal);
+
+if (declineForm) {
+  declineForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const noteId = pendingDeclineNoteId;
+    const memo = String(declineReasonInput?.value || "").trim();
+    if (!noteId || !memo) {
+      setStatus("Provide an explanation before declining this suggestion.");
+      return;
+    }
+    declineSuggestedNote(noteId, memo);
   });
 }
 

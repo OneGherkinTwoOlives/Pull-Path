@@ -87,6 +87,12 @@ h2 { margin: 0 0 0.55rem; font-size: 1.1rem; }
   flex-wrap: wrap;
 }
 
+.workspace-section + .workspace-section {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
 .auth-card {
   width: min(520px, 96vw);
 }
@@ -117,6 +123,30 @@ h2 { margin: 0 0 0.55rem; font-size: 1.1rem; }
 
 .auth-actions {
   justify-content: flex-end;
+}
+
+.login-signup-divider {
+  height: 1px;
+  margin: 1.1rem 0 0.95rem;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.login-signup-prompt {
+  display: grid;
+  gap: 0.7rem;
+  justify-items: start;
+}
+
+.login-signup-prompt p {
+  margin: 0;
+}
+
+.signup-modal-card {
+  width: min(760px, 100%);
+}
+
+.signup-grid-row {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .project-list {
@@ -474,6 +504,7 @@ h2 { margin: 0 0 0.55rem; font-size: 1.1rem; }
   .login-logo { width: min(300px, 88%); }
   .settings-card-header { flex-direction: column; }
   .portal-top-logo { width: min(260px, 70vw); }
+  .signup-grid-row { grid-template-columns: 1fr; }
 }
 
 /* Wizard styles */
