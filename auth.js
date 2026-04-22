@@ -249,25 +249,12 @@ const TSAuth = (() => {
         };
       }
 
-      const signedInAssignments = consultantAssignments(normalizedEmail);
-      if (signedInAssignments.length > 0) {
-        return {
-          ok: true,
-          session: {
-            role: "consultant",
-            email: normalizedEmail,
-            assignments: signedInAssignments,
-            loginAt: new Date().toISOString(),
-          },
-        };
-      }
-
       return {
         ok: true,
         session: {
           role: "project-admin",
           email: normalizedEmail,
-          assignments: [],
+          assignments: signedInProjectAdminProjects,
           loginAt: new Date().toISOString(),
         },
       };
