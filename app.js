@@ -66,7 +66,8 @@ const MIN_STAGE_WEEKS = 1;
 const MAX_STAGE_WEEKS = 260;
 const MIN_TIMELINE_PADDING_WEEKS = 2;
 const MAX_NOTES_PER_PLANNING_WEEK = 3;
-const DELIVERABLE_GUIDANCE_TEXT = "Start planning from here, add the task which preceeds this";
+const DELIVERABLE_GUIDANCE_LINE_1 = "Start planning from the end, Pull Planing strats from the finish and work backwards.";
+const DELIVERABLE_GUIDANCE_LINE_2 = "Use the \"<>\" button to requests items you require from your team.";
 
 const authSession = window.TSAuth.requireAuth(["super-admin", "project-admin", "consultant"]);
 if (!authSession) {
@@ -2135,7 +2136,7 @@ function updateNoteElement(note) {
   if (contentEl) {
     contentEl.setAttribute("contenteditable", editable && !isDeliverable ? "true" : "false");
     if (isDeliverable) {
-      contentEl.innerHTML = `<span class="deliverable-title">${escapeHtml(note.text || "Final Deliverable")}</span><span class="deliverable-guidance">${escapeHtml(DELIVERABLE_GUIDANCE_TEXT)}</span>`;
+      contentEl.innerHTML = `<span class="deliverable-title">${escapeHtml(note.text || "Final Deliverable")}</span><span class="deliverable-guidance"><span>${escapeHtml(DELIVERABLE_GUIDANCE_LINE_1)}</span><span>${escapeHtml(DELIVERABLE_GUIDANCE_LINE_2)}</span></span>`;
     }
   }
   if (topbarEl) {
