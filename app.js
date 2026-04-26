@@ -65,6 +65,8 @@ const MAX_DURATION_WEEKS = 52;
 const MIN_STAGE_WEEKS = 1;
 const MAX_STAGE_WEEKS = 260;
 const MIN_TIMELINE_PADDING_WEEKS = 2;
+const MAX_NOTES_PER_PLANNING_WEEK = 3;
+const DELIVERABLE_GUIDANCE_TEXT = "Start planning from here, add the task which preceeds this";
 
 const authSession = window.TSAuth.requireAuth(["super-admin", "project-admin", "consultant"]);
 if (!authSession) {
@@ -1165,6 +1167,60 @@ function xToDateLabel(x) {
   return formatUtcDate(startOfUtcWeekMonday(xToTimestamp(x)), "numeric");
 }
 
+function planningWeekIndexFromTimestamp(timestamp) {
+  const numericTimestamp = Number(timestamp);
+  if (!Number.isFinite(numericTimestamp)) {
+    return null;
+  }
+
+  const delta = state.finishDateMs - numericTimestamp;
+  if (delta <= 0) {
+    return null;
+  }
+
+  return Math.floor((delta - 1) / WEEK_MS);
+}
+
+function planningWeekInsertStartX(laneId) {
+  const notesPerWeek = new Map();
+
+  state.notes.forEach((note) => {
+    if ((note.kind || "task") === "deliverable") {
+      return;
+    }
+    if ((note.lane || SWIM_LANES[0].id) !== laneId) {
+      return;
+    }
+
+    const weekIndex = planningWeekIndexFromTimestamp(xToTimestamp(noteStartX(note)));
+    if (weekIndex === null) {
+      return;
+    }
+
+    notesPerWeek.set(weekIndex, (notesPerWeek.get(weekIndex) || 0) + 1);
+  });
+
+  const maxWeeksToSearch = Math.max(1, Math.ceil(visibleRangeWeeks()) + 12);
+  let targetWeekIndex = 0;
+  while (targetWeekIndex < maxWeeksToSearch && (notesPerWeek.get(targetWeekIndex) || 0) >= MAX_NOTES_PER_PLANNING_WEEK) {
+    targetWeekIndex += 1;
+  }
+
+  const weekEndMs = state.finishDateMs - targetWeekIndex * WEEK_MS;
+  const weekStartMs = weekEndMs - WEEK_MS;
+  const weekMidMs = weekStartMs + WEEK_MS / 2;
+  const durationPx = weeksToPixels(MIN_DURATION_WEEKS);
+  const minStart = stageStartX();
+  const maxStart = Math.max(minStart, stageFinishX() - durationPx);
+
+  let nextStartX = clamp(timestampToX(weekMidMs), minStart, maxStart);
+  if (state.snapToWeek) {
+    nextStartX = snapStartToMondayWithinBounds(nextStartX, minStart, maxStart);
+  }
+
+  return nextStartX;
+}
+
 function noteCenter(note) {
   return {
     x: note.x + note.width / 2,
@@ -2083,6 +2139,9 @@ function updateNoteElement(note) {
 
   if (contentEl) {
     contentEl.setAttribute("contenteditable", editable && !isDeliverable ? "true" : "false");
+    if (isDeliverable) {
+      contentEl.innerHTML = `<span class="deliverable-title">${escapeHtml(note.text || "Final Deliverable")}</span><span class="deliverable-guidance">${escapeHtml(DELIVERABLE_GUIDANCE_TEXT)}</span>`;
+    }
   }
   if (topbarEl) {
     topbarEl.style.display = isDeliverable ? "none" : "";
@@ -2978,10 +3037,9 @@ function addNewNote(laneId = SWIM_LANES[0].id, kind = "task") {
   const targetLaneId = laneId || defaultAddLaneId();
   const lTop = laneTopY(targetLaneId);
   const laneHeight = laneBodyHeightPx(targetLaneId);
-  const visibleCenterX = boardViewport.scrollLeft + boardViewport.clientWidth * 0.5;
   const defaultX = kind === "prerequisite"
     ? Math.max(0, stageStartX() - 250)
-    : visibleCenterX - 110;
+    : planningWeekInsertStartX(targetLaneId);
   createNote({
     x: defaultX,
     y: lTop + laneHeight / 2 - 94 * noteScale(),
@@ -2994,7 +3052,7 @@ function addNewNote(laneId = SWIM_LANES[0].id, kind = "task") {
   setStatus(
     kind === "prerequisite"
       ? `${getLane(targetLaneId).name} prerequisite created. Complete it before stage start.`
-      : `${getLane(targetLaneId).name} note created. Drag it anywhere on the board.`,
+      : `${getLane(targetLaneId).name} note created near the finish week. Drag it to refine sequencing.`,
   );
 }
 
