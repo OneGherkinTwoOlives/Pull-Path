@@ -8,6 +8,20 @@ const signupStatusEl = document.getElementById("signup-status");
 const openSignupBtn = document.getElementById("open-signup-btn");
 const closeSignupBtn = document.getElementById("close-signup-btn");
 const cancelSignupBtn = document.getElementById("cancel-signup-btn");
+const forgotModal = document.getElementById("forgot-modal");
+const forgotForm = document.getElementById("forgot-form");
+const forgotStatusEl = document.getElementById("forgot-status");
+const forgotEmailInput = document.getElementById("forgot-email");
+const openForgotBtn = document.getElementById("open-forgot-btn");
+const closeForgotBtn = document.getElementById("close-forgot-btn");
+const cancelForgotBtn = document.getElementById("cancel-forgot-btn");
+const resetModal = document.getElementById("reset-modal");
+const resetForm = document.getElementById("reset-form");
+const resetStatusEl = document.getElementById("reset-status");
+const resetPasswordInput = document.getElementById("reset-password");
+const resetConfirmInput = document.getElementById("reset-confirm-password");
+const closeResetBtn = document.getElementById("close-reset-btn");
+const cancelResetBtn = document.getElementById("cancel-reset-btn");
 
 function setStatus(element, message, kind = "") {
   if (!element) {
@@ -35,9 +49,53 @@ function closeSignupModal() {
   setStatus(signupStatusEl, "");
 }
 
+function openForgotModal() {
+  if (!forgotModal) {
+    return;
+  }
+  forgotModal.hidden = false;
+  setStatus(forgotStatusEl, "");
+  forgotEmailInput.value = emailInput.value.trim();
+  forgotEmailInput.focus();
+}
+
+function closeForgotModal() {
+  if (!forgotModal) {
+    return;
+  }
+  forgotModal.hidden = true;
+  forgotForm?.reset();
+  setStatus(forgotStatusEl, "");
+}
+
+function openResetModal() {
+  if (!resetModal) {
+    return;
+  }
+  resetModal.hidden = false;
+  setStatus(resetStatusEl, "");
+  resetPasswordInput?.focus();
+}
+
+function closeResetModal() {
+  if (!resetModal) {
+    return;
+  }
+  resetModal.hidden = true;
+  resetForm?.reset();
+  setStatus(resetStatusEl, "");
+}
+
+const isRecoveryLink = !!window.TSAuth.isRecoveryLink?.();
+
 const existingSession = window.TSAuth.getSession();
-if (existingSession) {
+if (existingSession && !isRecoveryLink) {
   window.location.href = window.TSAuth.routeForRole(existingSession.role);
+}
+
+if (isRecoveryLink) {
+  openResetModal();
+  setStatus(resetStatusEl, "Recovery link verified. Set your new password.");
 }
 
 loginForm.addEventListener("submit", async (event) => {
@@ -57,6 +115,11 @@ loginForm.addEventListener("submit", async (event) => {
 openSignupBtn?.addEventListener("click", openSignupModal);
 closeSignupBtn?.addEventListener("click", closeSignupModal);
 cancelSignupBtn?.addEventListener("click", closeSignupModal);
+openForgotBtn?.addEventListener("click", openForgotModal);
+closeForgotBtn?.addEventListener("click", closeForgotModal);
+cancelForgotBtn?.addEventListener("click", closeForgotModal);
+closeResetBtn?.addEventListener("click", closeResetModal);
+cancelResetBtn?.addEventListener("click", closeResetModal);
 
 signupModal?.addEventListener("click", (event) => {
   if (event.target === signupModal) {
@@ -64,9 +127,83 @@ signupModal?.addEventListener("click", (event) => {
   }
 });
 
+forgotModal?.addEventListener("click", (event) => {
+  if (event.target === forgotModal) {
+    closeForgotModal();
+  }
+});
+
+resetModal?.addEventListener("click", (event) => {
+  if (event.target === resetModal) {
+    closeResetModal();
+  }
+});
+
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && signupModal && !signupModal.hidden) {
+  if (event.key !== "Escape") {
+    return;
+  }
+
+  if (signupModal && !signupModal.hidden) {
     closeSignupModal();
+    return;
+  }
+
+  if (forgotModal && !forgotModal.hidden) {
+    closeForgotModal();
+    return;
+  }
+
+  if (resetModal && !resetModal.hidden) {
+    closeResetModal();
+  }
+});
+
+forgotForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setStatus(forgotStatusEl, "");
+
+  const email = forgotEmailInput.value.trim();
+  if (!email) {
+    setStatus(forgotStatusEl, "Enter your email address.", "error");
+    return;
+  }
+
+  try {
+    const result = await window.TSAuth.requestPasswordReset(email);
+    setStatus(forgotStatusEl, result.message || "If an account exists for this email, a recovery email has been sent.", "success");
+  } catch (error) {
+    console.error("Failed to request password reset:", error);
+    setStatus(forgotStatusEl, error.message || "Unable to send recovery email.", "error");
+  }
+});
+
+resetForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setStatus(resetStatusEl, "");
+
+  const password = resetPasswordInput.value;
+  const confirmPassword = resetConfirmInput.value;
+
+  if (!window.TSAuth.passwordMeetsRequirements(password)) {
+    setStatus(resetStatusEl, "Password must be at least 6 characters and include one capital letter and one symbol.", "error");
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    setStatus(resetStatusEl, "Password and confirmation do not match.", "error");
+    return;
+  }
+
+  try {
+    const result = await window.TSAuth.completePasswordReset(password);
+    setStatus(resetStatusEl, result.message || "Password updated. Please log in.", "success");
+    setStatus(errorEl, "Password updated. Please log in with your new password.", "success");
+    resetForm.reset();
+    closeResetModal();
+  } catch (error) {
+    console.error("Failed to update password:", error);
+    setStatus(resetStatusEl, error.message || "Unable to update password.", "error");
   }
 });
 

@@ -24,6 +24,9 @@
               <span>Password</span>
               <input id="login-password" type="password" required value="123" />
             </label>
+            <div class="auth-inline-actions">
+              <button id="open-forgot-btn" class="text-link-btn" type="button">Forgot password?</button>
+            </div>
             <div id="login-error" class="csv-status error" aria-live="polite"></div>
             <div class="actions-row auth-actions">
               <button class="primary-btn" type="submit">Login</button>
@@ -99,10 +102,59 @@
         </form>
       </div>
     </div>
+    <div id="forgot-modal" class="modal-backdrop" hidden>
+      <div class="modal-card">
+        <div class="modal-header">
+          <div>
+            <h2>Reset Password</h2>
+            <p class="muted">Enter your email and we will send a recovery link.</p>
+          </div>
+          <button id="close-forgot-btn" class="modal-close-btn" type="button" aria-label="Close reset password dialog">×</button>
+        </div>
+        <form id="forgot-form" class="project-form">
+          <label class="field">
+            <span>Email</span>
+            <input id="forgot-email" type="email" required />
+          </label>
+          <div id="forgot-status" class="csv-status" aria-live="polite"></div>
+          <div class="actions-row auth-actions">
+            <button id="cancel-forgot-btn" class="secondary-btn" type="button">Cancel</button>
+            <button class="primary-btn" type="submit">Send Recovery Email</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div id="reset-modal" class="modal-backdrop" hidden>
+      <div class="modal-card">
+        <div class="modal-header">
+          <div>
+            <h2>Set New Password</h2>
+            <p class="muted">Create your new password to complete account recovery.</p>
+          </div>
+          <button id="close-reset-btn" class="modal-close-btn" type="button" aria-label="Close set new password dialog">×</button>
+        </div>
+        <form id="reset-form" class="project-form">
+          <label class="field">
+            <span>New Password</span>
+            <input id="reset-password" type="password" required />
+          </label>
+          <label class="field">
+            <span>Confirm New Password</span>
+            <input id="reset-confirm-password" type="password" required />
+          </label>
+          <p class="field-hint">Password must be at least 6 characters and include one capital letter and one symbol.</p>
+          <div id="reset-status" class="csv-status" aria-live="polite"></div>
+          <div class="actions-row auth-actions">
+            <button id="cancel-reset-btn" class="secondary-btn" type="button">Cancel</button>
+            <button class="primary-btn" type="submit">Update Password</button>
+          </div>
+        </form>
+      </div>
+    </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js?v=1"></script>
     <script src="data-store.js?v=2"></script>
-    <script src="auth.js?v=12"></script>
-    <script src="login.js?v=2"></script>
+    <script src="auth.js?v=13"></script>
+    <script src="login.js?v=3"></script>
   </body>
 </html>

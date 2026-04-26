@@ -125,6 +125,27 @@ h2 { margin: 0 0 0.55rem; font-size: 1.1rem; }
   justify-content: flex-end;
 }
 
+.auth-inline-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.text-link-btn {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--accent-2);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.text-link-btn:hover {
+  color: #163b52;
+}
+
 .login-signup-divider {
   height: 1px;
   margin: 1.1rem 0 0.95rem;

@@ -46,6 +46,31 @@ const TSAuth = (() => {
     return new URL("login.html", window.location.href).toString();
   }
 
+  function recoveryRedirectUrl() {
+    const configuredRedirect = String(config.authRecoveryRedirectUrl || "").trim();
+    if (configuredRedirect) {
+      return configuredRedirect;
+    }
+    return signupRedirectUrl();
+  }
+
+  function authHashParams() {
+    const hash = String(window.location.hash || "").replace(/^#/, "");
+    return new URLSearchParams(hash);
+  }
+
+  function isRecoveryLink() {
+    return authHashParams().get("type") === "recovery";
+  }
+
+  function clearAuthHash() {
+    if (!window.location.hash) {
+      return;
+    }
+    const cleanUrl = `${window.location.pathname}${window.location.search}`;
+    window.history.replaceState({}, document.title, cleanUrl);
+  }
+
   function formatSupabaseAuthError(error) {
     const message = String(error?.message || "").toLowerCase();
     if (message.includes("email not confirmed") || message.includes("email_not_confirmed")) {
@@ -195,6 +220,54 @@ const TSAuth = (() => {
     };
   }
 
+  async function requestPasswordReset(email) {
+    if (!supabaseClient) {
+      throw new Error("Supabase authentication is not configured.");
+    }
+
+    const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail) {
+      throw new Error("Email is required.");
+    }
+
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(normalizedEmail, {
+      redirectTo: recoveryRedirectUrl(),
+    });
+
+    if (error) {
+      throw new Error(formatSupabaseAuthError(error));
+    }
+
+    return {
+      ok: true,
+      message: "If an account exists for this email, a password reset link has been sent.",
+    };
+  }
+
+  async function completePasswordReset(nextPassword) {
+    if (!supabaseClient) {
+      throw new Error("Supabase authentication is not configured.");
+    }
+
+    const password = String(nextPassword || "");
+    if (!passwordMeetsRequirements(password)) {
+      throw new Error("Password must be at least 6 characters and include one capital letter and one symbol.");
+    }
+
+    const { error } = await supabaseClient.auth.updateUser({ password });
+    if (error) {
+      throw new Error(formatSupabaseAuthError(error));
+    }
+
+    await supabaseClient.auth.signOut();
+    clearAuthHash();
+
+    return {
+      ok: true,
+      message: "Password updated. Please log in with your new password.",
+    };
+  }
+
   async function authenticate(email, password) {
     const normalizedEmail = normalizeEmail(email);
 
@@ -339,6 +412,10 @@ const TSAuth = (() => {
     passwordMeetsRequirements,
     authenticate,
     signUpAccount,
+    requestPasswordReset,
+    completePasswordReset,
+    isRecoveryLink,
+    clearAuthHash,
     resolveAdminAccount,
     consultantAssignments,
     projectAdminAssignments,
