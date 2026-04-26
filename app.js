@@ -67,7 +67,7 @@ const MAX_STAGE_WEEKS = 260;
 const MIN_TIMELINE_PADDING_WEEKS = 2;
 const MAX_NOTES_PER_PLANNING_WEEK = 3;
 const DELIVERABLE_GUIDANCE_LINE_1 = "Start planning from the end, Pull Planing strats from the finish and work backwards.";
-const DELIVERABLE_GUIDANCE_LINE_2 = "Use the \"<>\" button to requests items you require from your team.";
+const DELIVERABLE_GUIDANCE_LINE_2 = "Use the \"<>\" button to request items you require from your team.";
 
 const authSession = window.TSAuth.requireAuth(["super-admin", "project-admin", "consultant"]);
 if (!authSession) {
