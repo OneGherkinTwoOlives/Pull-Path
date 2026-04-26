@@ -1167,21 +1167,14 @@ function xToDateLabel(x) {
   return formatUtcDate(startOfUtcWeekMonday(xToTimestamp(x)), "numeric");
 }
 
-function planningAnchorWeekMondayMs() {
-  return startOfUtcWeekMonday(state.finishDateMs - 1);
-}
-
 function planningWeekIndexFromStartX(startX) {
-  const timestamp = xToTimestamp(startX);
-  const noteWeekMonday = startOfUtcWeekMonday(timestamp);
-  const anchorMonday = planningAnchorWeekMondayMs();
-  const deltaWeeks = Math.round((anchorMonday - noteWeekMonday) / WEEK_MS);
-
-  if (!Number.isFinite(deltaWeeks) || deltaWeeks < 0) {
+  const weekWidthPx = Math.max(1, weeksToPixels(1));
+  const deltaFromFinishPx = stageFinishX() - startX;
+  if (!Number.isFinite(deltaFromFinishPx) || deltaFromFinishPx <= 0) {
     return null;
   }
 
-  return deltaWeeks;
+  return Math.floor((deltaFromFinishPx - 0.001) / weekWidthPx);
 }
 
 function planningWeekInsertStartX(laneId) {
@@ -1209,8 +1202,8 @@ function planningWeekInsertStartX(laneId) {
     targetWeekIndex += 1;
   }
 
-  const targetWeekMonday = planningAnchorWeekMondayMs() - targetWeekIndex * WEEK_MS;
-  const weekMidMs = targetWeekMonday + WEEK_MS / 2;
+  const targetWeekEndMs = state.finishDateMs - targetWeekIndex * WEEK_MS;
+  const weekMidMs = targetWeekEndMs - WEEK_MS / 2;
   const durationPx = weeksToPixels(MIN_DURATION_WEEKS);
   const minStart = stageStartX();
   const maxStart = Math.max(minStart, stageFinishX() - durationPx);
