@@ -27,31 +27,49 @@
           </div>
 
           <section class="settings-section">
-            <h2>Contact Details</h2>
+            <h2>Profile Information</h2>
             <form id="account-contact-form" class="project-form">
-              <div class="field-row settings-contact-row">
+              <div class="field-row signup-grid-row">
                 <label class="field">
                   <span>Company</span>
                   <input id="account-company" type="text" />
                 </label>
                 <label class="field">
-                  <span>Position</span>
-                  <input id="account-position" type="text" />
+                  <span>Discipline/Trade</span>
+                  <select id="account-discipline">
+                    <option value="">Select Discipline/Trade</option>
+                  </select>
                 </label>
               </div>
-              <div class="field-row settings-contact-row">
+              <div class="field-row signup-grid-row">
+                <label class="field" id="discipline-other-field" hidden>
+                  <span>Specify Other</span>
+                  <input id="account-discipline-other" type="text" placeholder="Enter your discipline/trade" />
+                </label>
+              </div>
+              <div class="field-row signup-grid-row">
                 <label class="field">
-                  <span>Telephone Numbers</span>
-                  <textarea id="account-telephone-numbers" rows="4" placeholder="Enter one number per line"></textarea>
+                  <span>Name</span>
+                  <input id="account-name" type="text" />
+                </label>
+                <label class="field">
+                  <span>Email</span>
+                  <input id="account-email" type="email" />
+                </label>
+              </div>
+              <div class="field-row signup-grid-row">
+                <label class="field">
+                  <span>Phone Number</span>
+                  <input id="account-phone" type="tel" />
                 </label>
                 <label class="field">
                   <span>Address</span>
-                  <textarea id="account-address" rows="4"></textarea>
+                  <input id="account-address" type="text" />
                 </label>
               </div>
               <div id="account-contact-status" class="csv-status" aria-live="polite"></div>
               <div class="actions-row auth-actions">
-                <button class="primary-btn" type="submit">Save Contact Details</button>
+                <button class="primary-btn" type="submit">Save Profile</button>
               </div>
             </form>
           </section>
@@ -63,15 +81,11 @@
           <div class="modal-header">
             <div>
               <h2 id="password-modal-title">Change Password</h2>
-              <p class="muted">Update the password used to log into this administrator account.</p>
+              <p class="muted">Update your Pull Path account password.</p>
             </div>
             <button id="close-password-modal-btn" class="modal-close-btn" type="button" aria-label="Close">×</button>
           </div>
           <form id="password-form" class="project-form">
-            <label class="field">
-              <span>Current Password</span>
-              <input id="account-current-password" type="password" autocomplete="current-password" required />
-            </label>
             <label class="field">
               <span>New Password</span>
               <input id="account-new-password" type="password" autocomplete="new-password" required />
@@ -80,10 +94,11 @@
               <span>Confirm New Password</span>
               <input id="account-confirm-password" type="password" autocomplete="new-password" required />
             </label>
+            <p class="field-hint">Password must be at least 6 characters and include one capital letter and one symbol.</p>
             <div id="password-status" class="csv-status" aria-live="polite"></div>
             <div class="actions-row auth-actions">
               <button id="cancel-password-modal-btn" class="secondary-btn" type="button">Cancel</button>
-              <button class="primary-btn" type="submit">Save Password</button>
+              <button class="primary-btn" type="submit">Update Password</button>
             </div>
           </form>
         </div>

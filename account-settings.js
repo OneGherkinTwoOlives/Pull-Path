@@ -1,3 +1,28 @@
+const DISCIPLINES = [
+  "Architect",
+  "Landscape",
+  "Mechanical",
+  "Electrical",
+  "Structural",
+  "Owner/Developer",
+  "Interior Design",
+  "Civil",
+  "Envelope",
+  "Energy",
+  "Geotechnical",
+  "Code",
+  "Acoustic",
+  "Commissioning",
+  "Elevator",
+  "Environmental",
+  "Rendering",
+  "Survey",
+  "Sustainability",
+  "Traffic",
+  "Waste",
+  "Wind",
+];
+
 const session = window.TSAuth.requireAuth(["super-admin", "project-admin"]);
 if (!session) {
   throw new Error("Unauthorized");
@@ -13,13 +38,9 @@ const passwordStatusEl = document.getElementById("password-status");
 const openPasswordModalBtn = document.getElementById("open-password-modal-btn");
 const closePasswordModalBtn = document.getElementById("close-password-modal-btn");
 const cancelPasswordModalBtn = document.getElementById("cancel-password-modal-btn");
-
-function splitTelephoneNumbers(value) {
-  return String(value || "")
-    .split(/\r?\n|,/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
+const disciplineSelect = document.getElementById("account-discipline");
+const disciplineOtherField = document.getElementById("discipline-other-field");
+const disciplineOtherInput = document.getElementById("account-discipline-other");
 
 function setStatus(element, message, kind = "") {
   if (!element) {
@@ -29,26 +50,66 @@ function setStatus(element, message, kind = "") {
   element.textContent = message;
 }
 
-function populateContactForm(account) {
-  document.getElementById("account-company").value = account?.company || "";
-  document.getElementById("account-position").value = account?.position || "";
-  document.getElementById("account-telephone-numbers").value = Array.isArray(account?.telephoneNumbers)
-    ? account.telephoneNumbers.join("\n")
-    : "";
-  document.getElementById("account-address").value = account?.address || "";
+function populateDisciplineDropdown() {
+  disciplineSelect.innerHTML = '<option value="">Select Discipline/Trade</option>';
+  DISCIPLINES.forEach((discipline) => {
+    const option = document.createElement("option");
+    option.value = discipline;
+    option.textContent = discipline;
+    disciplineSelect.appendChild(option);
+  });
+  const otherOption = document.createElement("option");
+  otherOption.value = "other";
+  otherOption.textContent = "Other";
+  disciplineSelect.appendChild(otherOption);
+}
+
+function handleDisciplineChange() {
+  if (disciplineSelect.value === "other") {
+    disciplineOtherField.hidden = false;
+    disciplineOtherInput.focus();
+  } else {
+    disciplineOtherField.hidden = true;
+    disciplineOtherInput.value = "";
+  }
+}
+
+disciplineSelect.addEventListener("change", handleDisciplineChange);
+
+function populateProfileForm(profile) {
+  document.getElementById("account-company").value = profile?.company || "";
+  document.getElementById("account-name").value = profile?.name || "";
+  document.getElementById("account-email").value = profile?.email || "";
+  document.getElementById("account-phone").value = profile?.phone || "";
+  document.getElementById("account-address").value = profile?.address || "";
+  
+  const discipline = profile?.discipline || "";
+  if (DISCIPLINES.includes(discipline)) {
+    disciplineSelect.value = discipline;
+    disciplineOtherField.hidden = true;
+    disciplineOtherInput.value = "";
+  } else if (discipline) {
+    disciplineSelect.value = "other";
+    disciplineOtherInput.value = discipline;
+    disciplineOtherField.hidden = false;
+  } else {
+    disciplineSelect.value = "";
+    disciplineOtherField.hidden = true;
+    disciplineOtherInput.value = "";
+  }
 }
 
 async function loadAccountSettings() {
-  const account = await window.TSAuth.resolveAdminAccount(session.email);
-  populateContactForm(account);
-  return account;
+  const profile = await window.TSData.fetchUserProfile(session.email);
+  populateProfileForm(profile);
+  return profile;
 }
 
 function openPasswordModal() {
   passwordModal.hidden = false;
   setStatus(passwordStatusEl, "");
   passwordForm.reset();
-  document.getElementById("account-current-password").focus();
+  document.getElementById("account-new-password").focus();
 }
 
 function closePasswordModal() {
@@ -59,37 +120,42 @@ function closePasswordModal() {
 
 async function handleContactSubmit(event) {
   event.preventDefault();
-  const existing = await window.TSAuth.resolveAdminAccount(session.email);
+  
+  const discipline = disciplineSelect.value === "other" 
+    ? (disciplineOtherInput.value.trim() || "")
+    : disciplineSelect.value;
 
-  await window.TSData.saveAdminAccount({
+  const profile = {
     email: session.email,
-    password: existing?.password || window.TSAuth.DEFAULT_PASSWORD,
     company: document.getElementById("account-company").value.trim(),
-    position: document.getElementById("account-position").value.trim(),
-    telephoneNumbers: splitTelephoneNumbers(document.getElementById("account-telephone-numbers").value),
+    name: document.getElementById("account-name").value.trim(),
+    phone: document.getElementById("account-phone").value.trim(),
     address: document.getElementById("account-address").value.trim(),
-    createdAt: existing?.createdAt || null,
-  });
+    discipline: discipline,
+  };
 
-  setStatus(contactStatusEl, "Contact details saved.", "success");
+  try {
+    await window.TSData.saveUserProfile(profile);
+    setStatus(contactStatusEl, "Profile updated successfully.", "success");
+  } catch (error) {
+    console.error("Failed to save profile:", error);
+    setStatus(contactStatusEl, "Unable to save profile.", "error");
+  }
 }
 
 async function handlePasswordSubmit(event) {
   event.preventDefault();
 
-  const currentPassword = document.getElementById("account-current-password").value;
   const newPassword = document.getElementById("account-new-password").value;
   const confirmPassword = document.getElementById("account-confirm-password").value;
-  const existing = await window.TSAuth.resolveAdminAccount(session.email);
-  const expectedPassword = existing?.password || window.TSAuth.DEFAULT_PASSWORD;
 
-  if (currentPassword !== expectedPassword) {
-    setStatus(passwordStatusEl, "Current password is incorrect.", "error");
+  if (!newPassword || newPassword.length < 6) {
+    setStatus(passwordStatusEl, "Password must be at least 6 characters.", "error");
     return;
   }
 
-  if (!newPassword || newPassword.length < 3) {
-    setStatus(passwordStatusEl, "New password must be at least 3 characters.", "error");
+  if (!window.TSAuth.passwordMeetsRequirements(newPassword)) {
+    setStatus(passwordStatusEl, "Password must include one capital letter and one symbol.", "error");
     return;
   }
 
@@ -98,18 +164,14 @@ async function handlePasswordSubmit(event) {
     return;
   }
 
-  await window.TSData.saveAdminAccount({
-    email: session.email,
-    password: newPassword,
-    company: existing?.company || "",
-    position: existing?.position || "",
-    telephoneNumbers: Array.isArray(existing?.telephoneNumbers) ? existing.telephoneNumbers : [],
-    address: existing?.address || "",
-    createdAt: existing?.createdAt || null,
-  });
-
-  closePasswordModal();
-  setStatus(contactStatusEl, "Password updated.", "success");
+  try {
+    await window.TSAuth.completePasswordReset(newPassword);
+    closePasswordModal();
+    setStatus(contactStatusEl, "Password updated successfully.", "success");
+  } catch (error) {
+    console.error("Failed to update password:", error);
+    setStatus(passwordStatusEl, "Unable to update password.", "error");
+  }
 }
 
 document.getElementById("account-settings-logout-btn").addEventListener("click", () => {
@@ -117,23 +179,8 @@ document.getElementById("account-settings-logout-btn").addEventListener("click",
   window.location.href = "login.html";
 });
 
-contactForm.addEventListener("submit", async (event) => {
-  try {
-    await handleContactSubmit(event);
-  } catch (error) {
-    console.error("Failed to save contact details:", error);
-    setStatus(contactStatusEl, "Unable to save contact details.", "error");
-  }
-});
-
-passwordForm.addEventListener("submit", async (event) => {
-  try {
-    await handlePasswordSubmit(event);
-  } catch (error) {
-    console.error("Failed to save password:", error);
-    setStatus(passwordStatusEl, "Unable to update password.", "error");
-  }
-});
+contactForm.addEventListener("submit", handleContactSubmit);
+passwordForm.addEventListener("submit", handlePasswordSubmit);
 
 openPasswordModalBtn.addEventListener("click", openPasswordModal);
 closePasswordModalBtn.addEventListener("click", closePasswordModal);
@@ -157,6 +204,7 @@ async function initializePage() {
 
   backLink.href = window.TSAuth.routeForRole(session.role);
   emailEl.textContent = `Signed in as ${session.email}`;
+  populateDisciplineDropdown();
   await loadAccountSettings();
 }
 
