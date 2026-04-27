@@ -58,7 +58,15 @@
             </label>
             <label class="field">
               <span>Discipline/Trade*</span>
-              <input id="signup-discipline" type="text" required />
+              <select id="signup-discipline" required>
+                <option value="">Select Discipline/Trade</option>
+              </select>
+            </label>
+          </div>
+          <div class="field-row signup-grid-row discipline-trade-row">
+            <label class="field field-subset field-subset-disabled" id="signup-discipline-other-field">
+              <span>Specify Other</span>
+              <input id="signup-discipline-other" type="text" placeholder="Enter your discipline/trade" disabled />
             </label>
           </div>
           <div class="field-row signup-grid-row">
@@ -78,7 +86,7 @@
             </label>
             <label class="field">
               <span>Address</span>
-              <input id="signup-address" type="text" />
+              <textarea id="signup-address" rows="3"></textarea>
             </label>
           </div>
           <div class="field-row signup-grid-row">
@@ -153,6 +161,6 @@
     <script src="supabase-config.js?v=1"></script>
     <script src="data-store.js?v=2"></script>
     <script src="auth.js?v=13"></script>
-    <script src="login.js?v=3"></script>
+    <script src="login.js?v=4"></script>
   </body>
 </html>

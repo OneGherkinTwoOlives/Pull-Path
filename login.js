@@ -22,6 +22,34 @@ const resetPasswordInput = document.getElementById("reset-password");
 const resetConfirmInput = document.getElementById("reset-confirm-password");
 const closeResetBtn = document.getElementById("close-reset-btn");
 const cancelResetBtn = document.getElementById("cancel-reset-btn");
+const signupDisciplineSelect = document.getElementById("signup-discipline");
+const signupDisciplineOtherField = document.getElementById("signup-discipline-other-field");
+const signupDisciplineOtherInput = document.getElementById("signup-discipline-other");
+
+const DISCIPLINES = [
+  "Architect",
+  "Landscape",
+  "Mechanical",
+  "Electrical",
+  "Structural",
+  "Owner/Developer",
+  "Interior Design",
+  "Civil",
+  "Envelope",
+  "Energy",
+  "Geotechnical",
+  "Code",
+  "Acoustic",
+  "Commissioning",
+  "Elevator",
+  "Environmental",
+  "Rendering",
+  "Survey",
+  "Sustainability",
+  "Traffic",
+  "Waste",
+  "Wind",
+];
 
 function setStatus(element, message, kind = "") {
   if (!element) {
@@ -47,6 +75,45 @@ function closeSignupModal() {
   signupModal.hidden = true;
   signupForm?.reset();
   setStatus(signupStatusEl, "");
+  updateSignupDisciplineOtherState();
+}
+
+function populateSignupDisciplineOptions() {
+  if (!signupDisciplineSelect) {
+    return;
+  }
+
+  signupDisciplineSelect.innerHTML = '<option value="">Select Discipline/Trade</option>';
+  const sortedDisciplines = [...DISCIPLINES].sort((a, b) => a.localeCompare(b));
+
+  sortedDisciplines.forEach((discipline) => {
+    const option = document.createElement("option");
+    option.value = discipline;
+    option.textContent = discipline;
+    signupDisciplineSelect.appendChild(option);
+  });
+
+  const otherOption = document.createElement("option");
+  otherOption.value = "other";
+  otherOption.textContent = "Other";
+  signupDisciplineSelect.appendChild(otherOption);
+}
+
+function updateSignupDisciplineOtherState() {
+  if (!signupDisciplineSelect || !signupDisciplineOtherField || !signupDisciplineOtherInput) {
+    return;
+  }
+
+  if (signupDisciplineSelect.value === "other") {
+    signupDisciplineOtherField.classList.remove("field-subset-disabled");
+    signupDisciplineOtherInput.disabled = false;
+    signupDisciplineOtherInput.focus();
+    return;
+  }
+
+  signupDisciplineOtherField.classList.add("field-subset-disabled");
+  signupDisciplineOtherInput.disabled = true;
+  signupDisciplineOtherInput.value = "";
 }
 
 function openForgotModal() {
@@ -120,6 +187,7 @@ closeForgotBtn?.addEventListener("click", closeForgotModal);
 cancelForgotBtn?.addEventListener("click", closeForgotModal);
 closeResetBtn?.addEventListener("click", closeResetModal);
 cancelResetBtn?.addEventListener("click", closeResetModal);
+signupDisciplineSelect?.addEventListener("change", updateSignupDisciplineOtherState);
 
 signupModal?.addEventListener("click", (event) => {
   if (event.target === signupModal) {
@@ -207,12 +275,17 @@ resetForm?.addEventListener("submit", async (event) => {
   }
 });
 
+populateSignupDisciplineOptions();
+updateSignupDisciplineOtherState();
+
 signupForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
   setStatus(signupStatusEl, "");
 
   const company = document.getElementById("signup-company").value.trim();
-  const disciplineTrade = document.getElementById("signup-discipline").value.trim();
+  const disciplineSelection = signupDisciplineSelect?.value || "";
+  const disciplineOther = signupDisciplineOtherInput?.value.trim() || "";
+  const disciplineTrade = disciplineSelection === "other" ? disciplineOther : disciplineSelection;
   const name = document.getElementById("signup-name").value.trim();
   const email = document.getElementById("signup-email").value.trim();
   const phoneNumber = document.getElementById("signup-phone").value.trim();
@@ -247,6 +320,7 @@ signupForm?.addEventListener("submit", async (event) => {
     });
     setStatus(signupStatusEl, result.message || "Check your email to confirm your account.", "success");
     signupForm.reset();
+    updateSignupDisciplineOtherState();
   } catch (error) {
     console.error("Failed to create account:", error);
     setStatus(signupStatusEl, error.message || "Unable to create account.", "error");
