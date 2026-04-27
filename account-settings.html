@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="portal.css?v=4" />
+    <link rel="stylesheet" href="portal.css?v=5" />
   </head>
   <body>
     <main class="portal-main">
@@ -29,6 +29,16 @@
           <section class="settings-section">
             <h2>Profile Information</h2>
             <form id="account-contact-form" class="project-form">
+              <div class="field-row signup-grid-row settings-profile-row">
+                <label class="field">
+                  <span>Phone Number</span>
+                  <input id="account-phone" type="tel" />
+                </label>
+                <label class="field">
+                  <span>Address</span>
+                  <textarea id="account-address" rows="3"></textarea>
+                </label>
+              </div>
               <div class="field-row signup-grid-row">
                 <label class="field">
                   <span>Company</span>
@@ -55,16 +65,6 @@
                 <label class="field">
                   <span>Email</span>
                   <input id="account-email" type="email" />
-                </label>
-              </div>
-              <div class="field-row signup-grid-row settings-profile-row">
-                <label class="field">
-                  <span>Phone Number</span>
-                  <input id="account-phone" type="tel" />
-                </label>
-                <label class="field">
-                  <span>Address</span>
-                  <textarea id="account-address" rows="3"></textarea>
                 </label>
               </div>
               <div id="account-contact-status" class="csv-status" aria-live="polite"></div>
