@@ -52,7 +52,8 @@ function setStatus(element, message, kind = "") {
 
 function populateDisciplineDropdown() {
   disciplineSelect.innerHTML = '<option value="">Select Discipline/Trade</option>';
-  DISCIPLINES.forEach((discipline) => {
+  const sortedDisciplines = [...DISCIPLINES].sort((a, b) => a.localeCompare(b));
+  sortedDisciplines.forEach((discipline) => {
     const option = document.createElement("option");
     option.value = discipline;
     option.textContent = discipline;
@@ -66,10 +67,12 @@ function populateDisciplineDropdown() {
 
 function handleDisciplineChange() {
   if (disciplineSelect.value === "other") {
-    disciplineOtherField.hidden = false;
+    disciplineOtherField.classList.remove("field-subset-disabled");
+    disciplineOtherInput.disabled = false;
     disciplineOtherInput.focus();
   } else {
-    disciplineOtherField.hidden = true;
+    disciplineOtherField.classList.add("field-subset-disabled");
+    disciplineOtherInput.disabled = true;
     disciplineOtherInput.value = "";
   }
 }
@@ -86,15 +89,18 @@ function populateProfileForm(profile) {
   const discipline = profile?.discipline || "";
   if (DISCIPLINES.includes(discipline)) {
     disciplineSelect.value = discipline;
-    disciplineOtherField.hidden = true;
+    disciplineOtherField.classList.add("field-subset-disabled");
+    disciplineOtherInput.disabled = true;
     disciplineOtherInput.value = "";
   } else if (discipline) {
     disciplineSelect.value = "other";
     disciplineOtherInput.value = discipline;
-    disciplineOtherField.hidden = false;
+    disciplineOtherField.classList.remove("field-subset-disabled");
+    disciplineOtherInput.disabled = false;
   } else {
     disciplineSelect.value = "";
-    disciplineOtherField.hidden = true;
+    disciplineOtherField.classList.add("field-subset-disabled");
+    disciplineOtherInput.disabled = true;
     disciplineOtherInput.value = "";
   }
 }

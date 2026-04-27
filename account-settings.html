@@ -34,15 +34,15 @@
                   <span>Company</span>
                   <input id="account-company" type="text" />
                 </label>
+              </div>
+              <div class="field-row signup-grid-row discipline-trade-row">
                 <label class="field">
                   <span>Discipline/Trade</span>
                   <select id="account-discipline">
                     <option value="">Select Discipline/Trade</option>
                   </select>
                 </label>
-              </div>
-              <div class="field-row signup-grid-row">
-                <label class="field" id="discipline-other-field" hidden>
+                <label class="field field-subset" id="discipline-other-field">
                   <span>Specify Other</span>
                   <input id="account-discipline-other" type="text" placeholder="Enter your discipline/trade" />
                 </label>
@@ -106,8 +106,8 @@
     </main>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="data-store.js"></script>
-    <script src="auth.js"></script>
-    <script src="account-settings.js"></script>
+    <script src="data-store.js?v=2"></script>
+    <script src="auth.js?v=13"></script>
+    <script src="account-settings.js?v=2"></script>
   </body>
 </html>
