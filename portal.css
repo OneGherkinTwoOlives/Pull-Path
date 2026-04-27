@@ -273,6 +273,7 @@ h2 { margin: 0 0 0.55rem; font-size: 1.1rem; }
 .settings-contact-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .discipline-trade-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .settings-profile-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.settings-profile-row { align-items: start; }
 .field-subset {
   border-left: 2px solid rgba(0,0,0,0.12);
   padding-left: 0.7rem;
