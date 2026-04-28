@@ -23,7 +23,7 @@ const DISCIPLINES = [
   "Wind",
 ];
 
-const session = window.TSAuth.requireAuth(["super-admin", "project-admin"]);
+const session = window.TSAuth.requireAuth(["super-admin", "project-admin", "consultant"]);
 if (!session) {
   throw new Error("Unauthorized");
 }
