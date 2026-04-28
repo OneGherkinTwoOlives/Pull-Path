@@ -24,6 +24,7 @@ function renderAssignments() {
 
   projectMap.forEach((entry, projectId) => {
     const li = document.createElement("li");
+    li.className = "project-item-row";
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "project-item-btn";
