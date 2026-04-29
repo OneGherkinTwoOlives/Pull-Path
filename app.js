@@ -67,6 +67,7 @@ const MAX_STAGE_WEEKS = 260;
 const MIN_TIMELINE_PADDING_WEEKS = 2;
 const MAX_NOTES_PER_PLANNING_WEEK = 3;
 const BASE_WEEK_WIDTH_PX = 160;
+const DELIVERABLE_NOTE_SIZE_PX = 176;
 const DELIVERABLE_GUIDANCE_LINE_1 = "Start planning from the end, Pull Planing strats from the finish and work backwards.";
 const DELIVERABLE_GUIDANCE_LINE_2 = "Use the \"<>\" button to request items you require from your team.";
 
@@ -2138,7 +2139,7 @@ function updateNoteElement(note) {
   if (contentEl) {
     contentEl.setAttribute("contenteditable", editable && !isDeliverable ? "true" : "false");
     if (isDeliverable) {
-      contentEl.innerHTML = `<span class="deliverable-title">${escapeHtml(note.text || "Final Deliverable")}</span><span class="deliverable-guidance"><span>${escapeHtml(DELIVERABLE_GUIDANCE_LINE_1)}</span><span>${escapeHtml(DELIVERABLE_GUIDANCE_LINE_2)}</span></span>`;
+      contentEl.innerHTML = `<span class="deliverable-title">${escapeHtml(note.text || "Final Deliverable")}</span><span class="deliverable-guidance">${escapeHtml(DELIVERABLE_GUIDANCE_LINE_1)}<br><br>${escapeHtml(DELIVERABLE_GUIDANCE_LINE_2)}</span>`;
     }
   }
   if (topbarEl) {
@@ -2727,14 +2728,15 @@ function createNote({
   const noteId = id || uid("note");
   const maxDurationWeeks = Math.max(MIN_DURATION_WEEKS, Math.min(MAX_DURATION_WEEKS, Math.floor(state.stageDurationWeeks)));
   const noteKind = kind || "task";
+  const baseNoteSize = noteKind === "deliverable" ? DELIVERABLE_NOTE_SIZE_PX : 210;
   const note = {
     id: noteId,
     x,
     y,
-    width: 210,
-    height: noteKind === "deliverable" ? 78 : 150,
-    baseWidth: 210,
-    baseHeight: noteKind === "deliverable" ? 78 : 150,
+    width: baseNoteSize,
+    height: noteKind === "deliverable" ? baseNoteSize : 150,
+    baseWidth: baseNoteSize,
+    baseHeight: noteKind === "deliverable" ? baseNoteSize : 150,
     text: text || "",
     durationWeeks: ["prerequisite", "deliverable"].includes(noteKind) ? 0 : clamp(durationWeeks, MIN_DURATION_WEEKS, maxDurationWeeks),
     kind: noteKind,
