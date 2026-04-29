@@ -268,6 +268,67 @@ const TSAuth = (() => {
     };
   }
 
+  async function updateAccountPassword(email, nextPassword) {
+    if (window.TSData?.initialize) {
+      await window.TSData.initialize();
+    }
+
+    const normalizedEmail = normalizeEmail(email);
+    const password = String(nextPassword || "");
+    if (!normalizedEmail) {
+      throw new Error("Email is required.");
+    }
+    if (!passwordMeetsRequirements(password)) {
+      throw new Error("Password must be at least 6 characters and include one capital letter and one symbol.");
+    }
+
+    const existingProfile = window.TSData?.fetchUserProfile
+      ? await window.TSData.fetchUserProfile(normalizedEmail)
+      : null;
+
+    const hasSupabaseAuthIdentity = !!existingProfile?.authUserId;
+    if (hasSupabaseAuthIdentity && supabaseClient) {
+      const { data: authUserData, error: authUserError } = await supabaseClient.auth.getUser();
+      if (authUserError) {
+        throw new Error(formatSupabaseAuthError(authUserError));
+      }
+      const activeAuthEmail = normalizeEmail(authUserData?.user?.email);
+      if (!activeAuthEmail || activeAuthEmail !== normalizedEmail) {
+        throw new Error("Please log out and log back in before changing your password.");
+      }
+
+      const { error } = await supabaseClient.auth.updateUser({ password });
+      if (error) {
+        throw new Error(formatSupabaseAuthError(error));
+      }
+
+      return {
+        ok: true,
+        message: "Password updated.",
+      };
+    }
+
+    const existingAccount = await resolveAdminAccount(normalizedEmail);
+    if (!window.TSData?.saveAdminAccount) {
+      throw new Error("Unable to update password right now.");
+    }
+
+    await window.TSData.saveAdminAccount({
+      email: normalizedEmail,
+      password,
+      company: existingAccount?.company || "",
+      position: existingAccount?.position || "",
+      telephoneNumbers: Array.isArray(existingAccount?.telephoneNumbers) ? existingAccount.telephoneNumbers : [],
+      address: existingAccount?.address || "",
+      createdAt: existingAccount?.createdAt || null,
+    });
+
+    return {
+      ok: true,
+      message: "Password updated.",
+    };
+  }
+
   async function authenticate(email, password) {
     const normalizedEmail = normalizeEmail(email);
 
@@ -371,7 +432,8 @@ const TSAuth = (() => {
       return { ok: false, message: "No consultant assignments found for this email." };
     }
 
-    if (password !== DEFAULT_PASSWORD) {
+    const expectedPassword = await resolveAdminPassword(normalizedEmail);
+    if (password !== expectedPassword) {
       return { ok: false, message: "Invalid password." };
     }
 
@@ -415,6 +477,7 @@ const TSAuth = (() => {
     signUpAccount,
     requestPasswordReset,
     completePasswordReset,
+    updateAccountPassword,
     isRecoveryLink,
     clearAuthHash,
     resolveAdminAccount,

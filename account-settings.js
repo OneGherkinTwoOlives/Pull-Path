@@ -171,7 +171,7 @@ async function handlePasswordSubmit(event) {
   }
 
   try {
-    await window.TSAuth.completePasswordReset(newPassword);
+    await window.TSAuth.updateAccountPassword(session.email, newPassword);
     closePasswordModal();
     setStatus(contactStatusEl, "Password updated successfully.", "success");
   } catch (error) {
