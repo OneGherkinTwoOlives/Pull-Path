@@ -66,6 +66,7 @@ const MIN_STAGE_WEEKS = 1;
 const MAX_STAGE_WEEKS = 260;
 const MIN_TIMELINE_PADDING_WEEKS = 2;
 const MAX_NOTES_PER_PLANNING_WEEK = 3;
+const BASE_WEEK_WIDTH_PX = 160;
 const DELIVERABLE_GUIDANCE_LINE_1 = "Start planning from the end, Pull Planing strats from the finish and work backwards.";
 const DELIVERABLE_GUIDANCE_LINE_2 = "Use the \"<>\" button to request items you require from your team.";
 
@@ -1324,7 +1325,8 @@ function utcMsToDateValue(ms) {
 
 function updateBoardWidth() {
   const viewportWidth = boardViewport.clientWidth || window.innerWidth;
-  const scaledWidth = Math.max(viewportWidth, Math.round(viewportWidth * state.zoomX * 1.5));
+  const weekScaledWidth = Math.round(visibleRangeWeeks() * BASE_WEEK_WIDTH_PX * state.zoomX);
+  const scaledWidth = Math.max(viewportWidth, weekScaledWidth);
   board.style.width = `${scaledWidth}px`;
   board.style.minHeight = `${laneHeaderHeightPx() + computeLaneLayout().totalBodyHeight}px`;
 }
