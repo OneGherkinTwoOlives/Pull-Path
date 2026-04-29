@@ -24,10 +24,10 @@ const TSAuth = (() => {
     if (normalizedRole === "super-admin") {
       return "index.html";
     }
-    if (normalizedRole === "project-admin") {
+    if (normalizedRole === "project-admin" || normalizedRole === "consultant") {
       return "project-admin-workspace.html";
     }
-    return "consultant-workspace.html";
+    return "project-admin-workspace.html";
   }
 
   function normalizeEmail(email) {

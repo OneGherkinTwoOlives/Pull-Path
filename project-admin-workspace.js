@@ -1,4 +1,4 @@
-const session = window.TSAuth.requireAuth(["project-admin"]);
+const session = window.TSAuth.requireAuth(["project-admin", "consultant"]);
 if (!session) {
   throw new Error("Unauthorized");
 }
@@ -98,6 +98,9 @@ createProjectBtn?.addEventListener("click", () => {
 async function initializePage() {
   if (window.TSData?.initialize) {
     await window.TSData.initialize();
+  }
+  if (createProjectBtn && session.role !== "project-admin") {
+    createProjectBtn.hidden = true;
   }
   renderAssignments();
 }

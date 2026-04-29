@@ -441,7 +441,7 @@ async function configureSwimLanesFromProject() {
 
     if (!consultantLaneIds.length) {
       alert("You are not assigned to this project.");
-      window.location.href = "consultant-workspace.html";
+      window.location.href = "project-admin-workspace.html";
       return;
     }
   }
