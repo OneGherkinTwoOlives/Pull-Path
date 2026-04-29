@@ -13,6 +13,10 @@ const TSData = (() => {
     return JSON.parse(JSON.stringify(value));
   }
 
+  function normalizeEmail(email) {
+    return String(email || "").trim().toLowerCase();
+  }
+
   function readProjectsCache() {
     try {
       return JSON.parse(localStorage.getItem(PROJECTS_KEY) || "[]");
@@ -48,11 +52,15 @@ const TSData = (() => {
   function upsertUserProfilesCache(profiles) {
     const next = [...readUserProfilesCache()];
     (profiles || []).forEach((profile) => {
-      const idx = next.findIndex((item) => item.email === profile.email);
+      const normalizedProfile = {
+        ...profile,
+        email: normalizeEmail(profile?.email),
+      };
+      const idx = next.findIndex((item) => normalizeEmail(item.email) === normalizedProfile.email);
       if (idx === -1) {
-        next.push(profile);
+        next.push(normalizedProfile);
       } else {
-        next[idx] = profile;
+        next[idx] = normalizedProfile;
       }
     });
     writeUserProfilesCache(next);
@@ -129,7 +137,7 @@ const TSData = (() => {
 
   function normalizeUserProfileRow(row) {
     return {
-      email: row.email,
+      email: normalizeEmail(row.email),
       authUserId: row.auth_user_id || null,
       name: row.full_name || "",
       company: row.company || "",
@@ -174,7 +182,7 @@ const TSData = (() => {
 
   function serializeUserProfile(profile) {
     return {
-      email: profile.email,
+      email: normalizeEmail(profile.email),
       auth_user_id: profile.authUserId || null,
       full_name: profile.name || "",
       company: profile.company || "",
@@ -301,12 +309,14 @@ const TSData = (() => {
   }
 
   function getUserProfileSync(email) {
-    return readUserProfilesCache().find((profile) => profile.email === email) || null;
+    const normalizedEmail = normalizeEmail(email);
+    return readUserProfilesCache().find((profile) => normalizeEmail(profile.email) === normalizedEmail) || null;
   }
 
   async function fetchUserProfile(email) {
-    const cached = getUserProfileSync(email);
-    if (!email || !isConfigured) {
+    const normalizedEmail = normalizeEmail(email);
+    const cached = getUserProfileSync(normalizedEmail);
+    if (!normalizedEmail || !isConfigured) {
       return cached;
     }
 
@@ -314,7 +324,9 @@ const TSData = (() => {
       const { data, error } = await client
         .from("user_profiles")
         .select("*")
-        .eq("email", email)
+        .eq("email", normalizedEmail)
+        .order("updated_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (error) {
@@ -334,6 +346,7 @@ const TSData = (() => {
 
   async function saveUserProfile(profile) {
     const normalized = clone(profile || null);
+    normalized.email = normalizeEmail(normalized?.email);
     if (!normalized?.email) {
       throw new Error("User profile email is required.");
     }

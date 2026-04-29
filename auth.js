@@ -279,7 +279,8 @@ const TSAuth = (() => {
       ? await window.TSData.fetchUserProfile(normalizedEmail)
       : null;
 
-    if (existingProfile && supabaseClient) {
+    const hasSupabaseAuthIdentity = !!existingProfile?.authUserId;
+    if (hasSupabaseAuthIdentity && supabaseClient) {
       const { data, error } = await supabaseClient.auth.signInWithPassword({
         email: normalizedEmail,
         password,

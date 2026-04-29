@@ -135,9 +135,9 @@ async function handleContactSubmit(event) {
     email: session.email,
     company: document.getElementById("account-company").value.trim(),
     name: document.getElementById("account-name").value.trim(),
-    phone: document.getElementById("account-phone").value.trim(),
+    phoneNumber: document.getElementById("account-phone").value.trim(),
     address: document.getElementById("account-address").value.trim(),
-    discipline: discipline,
+    disciplineTrade: discipline,
   };
 
   try {
