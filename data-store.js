@@ -435,6 +435,45 @@ const TSData = (() => {
     }
   }
 
+
+  /**
+   * Subscribe to real-time updates for a board state row.
+   * callback(parsedState) is called whenever another client saves the board.
+   * Returns the Supabase channel; pass it to unsubscribeBoardState() on cleanup.
+   */
+  function subscribeBoardState(projectId, callback) {
+    if (!isConfigured || !projectId) return null;
+    const channel = client
+      .channel(`board-rt-${projectId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "board_states",
+          filter: `project_id=eq.${projectId}`,
+        },
+        (payload) => {
+          const raw = payload.new?.state;
+          // Supabase returns JSONB columns already parsed as objects
+          const parsed = raw && typeof raw === "object" ? raw : null;
+          if (parsed) callback(parsed);
+        },
+      )
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          console.log(`[Realtime] Subscribed to board ${projectId}`);
+        }
+      });
+    return channel;
+  }
+
+  function unsubscribeBoardState(channel) {
+    if (channel && isConfigured) {
+      client.removeChannel(channel);
+    }
+  }
+
   return {
     initialize,
     isConfigured,
@@ -451,6 +490,8 @@ const TSData = (() => {
     getBoardStateSync,
     saveBoardState,
     deleteBoardState,
+    subscribeBoardState,
+    unsubscribeBoardState,
   };
 })();
 

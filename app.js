@@ -664,6 +664,10 @@ async function saveState() {
       project.name = serialized.projectName;
       await saveProjects(projects);
     }
+    lastLocalSaveMs = Date.now();
+    lastRemoteNoteIds = new Set(
+      (serialized.notes || []).map((n) => n.id),
+    );
     setStatus("✓ Board saved");
   } catch (err) {
     console.error("Failed to save board:", err);
@@ -3102,7 +3106,13 @@ document.addEventListener("pointermove", (event) => {
 
 document.addEventListener("pointerup", () => {
   if (dragState) {
-    saveState();
+    saveState().then(() => {
+      if (pendingRemoteState) {
+        const queued = pendingRemoteState;
+        pendingRemoteState = null;
+        applyRemoteState(queued);
+      }
+    });
   }
   dragState = null;
 });
@@ -3408,6 +3418,106 @@ window.addEventListener("resize", () => {
   refreshLayout({ noteStartTimestamps });
 });
 
+// ---------------------------------------------------------------------------
+// Real-time collaboration
+// ---------------------------------------------------------------------------
+let realtimeChannel = null;
+// Timestamp of our last local save — used to suppress the echo Supabase sends
+// back to us after we write (ignore remote updates within 3 s of our own save).
+let lastLocalSaveMs = 0;
+// IDs present in the most recently received remote snapshot.
+// Lets us detect when another user deletes a note.
+let lastRemoteNoteIds = new Set();
+// Remote state waiting to be applied once the user finishes a drag.
+let pendingRemoteState = null;
+
+/**
+ * Merge a remote board state snapshot into the current local state.
+ * Strategy (by note ID):
+ *   - Remote note exists locally → use the remote version, UNLESS it is
+ *     currently being dragged (keep the live local position for that one).
+ *   - Remote note doesn't exist locally → add it (another user added it).
+ *   - Local note not in remote AND not in lastRemoteNoteIds → locally added,
+ *     not yet round-tripped → keep it.
+ *   - Local note not in remote BUT was in lastRemoteNoteIds → deleted
+ *     remotely → remove it from local state.
+ * Links are taken wholesale from remote (each link op is atomic).
+ * Project-level settings (duration, finish date) are taken from remote.
+ */
+function applyRemoteState(remoteState) {
+  if (!remoteState) return;
+
+  const remoteNotes = Array.isArray(remoteState.notes) ? remoteState.notes : [];
+  const remoteNoteMap = new Map(remoteNotes.map((n) => [n.id, n]));
+  const remoteNoteIds = new Set(remoteNoteMap.keys());
+
+  const draggedId = dragState?.noteId ?? null;
+
+  const mergedNotes = new Map();
+
+  // Add/update all notes from the remote snapshot.
+  for (const [id, remoteNote] of remoteNoteMap) {
+    if (id === draggedId) {
+      // Keep local position for the note currently being dragged.
+      mergedNotes.set(id, state.notes.get(id) ?? remoteNote);
+    } else {
+      mergedNotes.set(id, remoteNote);
+    }
+  }
+
+  // Preserve locally-added notes that haven't synced back yet.
+  for (const [id, localNote] of state.notes) {
+    if ((localNote.kind || "task") === "deliverable") continue;
+    if (!remoteNoteIds.has(id) && !lastRemoteNoteIds.has(id)) {
+      // Locally added since last sync — keep it.
+      mergedNotes.set(id, localNote);
+    }
+    // If it was in lastRemoteNoteIds but not in remoteNoteIds it was deleted
+    // remotely — don't add it back.
+  }
+
+  // Update state
+  state.notes = mergedNotes;
+  if (Array.isArray(remoteState.links)) {
+    state.links = [...remoteState.links];
+  }
+  if (remoteState.stageDurationWeeks) {
+    state.stageDurationWeeks = remoteState.stageDurationWeeks;
+  }
+  if (remoteState.finishDateMs) {
+    state.finishDateMs = remoteState.finishDateMs;
+  }
+  if (remoteState.deliverables) {
+    state.deliverables = remoteState.deliverables;
+  }
+
+  lastRemoteNoteIds = new Set(remoteNoteIds);
+
+  refreshLayout();
+  renderLinks();
+  setStatus("↻ Live update received");
+  setTimeout(() => setStatus(""), 3000);
+}
+
+function setupRealtimeSync() {
+  if (!window.TSData?.subscribeBoardState) return;
+  const projectId = getProjectIdFromLocation();
+  if (!projectId) return;
+
+  realtimeChannel = window.TSData.subscribeBoardState(projectId, (remoteState) => {
+    // Suppress echo — ignore if we just saved within the last 3 seconds.
+    if (Date.now() - lastLocalSaveMs < 3000) return;
+
+    if (dragState) {
+      // Don't disrupt an active drag — apply after the pointer is released.
+      pendingRemoteState = remoteState;
+      return;
+    }
+
+    applyRemoteState(remoteState);
+  });
+}
+
 async function initializeBoard() {
   if (window.TSData?.initialize) {
     await window.TSData.initialize();
@@ -3421,7 +3531,15 @@ async function initializeBoard() {
   const savedState = await loadState();
   if (savedState) {
     applyLoadedState(savedState, loadViewState());
+    // Seed the last-known-remote note IDs from the initial load so deletions
+    // by other users can be detected correctly on the first realtime event.
+    lastRemoteNoteIds = new Set(
+      (savedState.notes || [])
+        .filter((n) => (n.kind || "task") !== "deliverable")
+        .map((n) => n.id),
+    );
     setStatus("Board loaded from save.");
+    setupRealtimeSync();
     return;
   }
 
