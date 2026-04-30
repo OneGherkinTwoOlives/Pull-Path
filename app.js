@@ -2097,11 +2097,11 @@ function setSelectedNote(noteId) {
   }
 
   const current = state.selectedNoteId ? state.notes.get(state.selectedNoteId) : null;
-  current?.el.classList.remove("selected");
+  current?.el?.classList.remove("selected");
 
   state.selectedNoteId = noteId;
   const next = noteId ? state.notes.get(noteId) : null;
-  next?.el.classList.add("selected");
+  next?.el?.classList.add("selected");
 
   updateCriticalPathView();
   refreshLayout();
@@ -3451,43 +3451,85 @@ function applyRemoteState(remoteState) {
   const remoteNoteMap = new Map(remoteNotes.map((n) => [n.id, n]));
   const remoteNoteIds = new Set(remoteNoteMap.keys());
 
-  const draggedId = dragState?.noteId ?? null;
+  const draggedId = dragState?.id ?? null;
 
-  const mergedNotes = new Map();
+  // Remove notes deleted remotely (except unsynced local notes).
+  for (const [id, localNote] of [...state.notes.entries()]) {
+    const isDeliverable = (localNote.kind || "task") === "deliverable";
+    if (isDeliverable) {
+      continue;
+    }
 
-  // Add/update all notes from the remote snapshot.
+    const existsRemotely = remoteNoteIds.has(id);
+    const existedInPreviousRemote = lastRemoteNoteIds.has(id);
+    const keepUnsyncedLocal = !existsRemotely && !existedInPreviousRemote;
+
+    if (!existsRemotely && !keepUnsyncedLocal) {
+      deleteNote(id, { skipSave: true, skipStatus: true, skipCascade: true });
+    }
+  }
+
+  // Upsert remote notes while preserving existing live note instances and DOM bindings.
   for (const [id, remoteNote] of remoteNoteMap) {
+    const existing = state.notes.get(id);
+
+    if (!existing) {
+      createNote({
+        id: remoteNote.id,
+        x: remoteNote.x,
+        y: remoteNote.y,
+        text: remoteNote.text,
+        durationWeeks: remoteNote.durationWeeks,
+        kind: remoteNote.kind || "task",
+        lane: remoteNote.lane || SWIM_LANES[0].id,
+        importedFromCsv: !!remoteNote.importedFromCsv,
+        importedFileName: remoteNote.importedFileName || null,
+        requestSourceNoteId: remoteNote.requestSourceNoteId || null,
+        requestMemo: remoteNote.requestMemo || "",
+        requestDeclines: normalizeDeclineFeedback(remoteNote.requestDeclines),
+      });
+      continue;
+    }
+
     if (id === draggedId) {
-      // Keep local position for the note currently being dragged.
-      mergedNotes.set(id, state.notes.get(id) ?? remoteNote);
-    } else {
-      mergedNotes.set(id, remoteNote);
+      // Keep the local coordinates while dragging; still take remote content edits.
+      existing.text = remoteNote.text ?? existing.text;
+      existing.durationWeeks = remoteNote.durationWeeks ?? existing.durationWeeks;
+      existing.kind = remoteNote.kind || existing.kind;
+      existing.lane = remoteNote.lane || existing.lane;
+      existing.importedFromCsv = !!remoteNote.importedFromCsv;
+      existing.importedFileName = remoteNote.importedFileName || null;
+      existing.requestSourceNoteId = remoteNote.requestSourceNoteId || null;
+      existing.requestMemo = remoteNote.requestMemo || "";
+      existing.requestDeclines = normalizeDeclineFeedback(remoteNote.requestDeclines);
+      updateNoteElement(existing);
+      continue;
     }
+
+    existing.x = remoteNote.x;
+    existing.y = remoteNote.y;
+    existing.text = remoteNote.text;
+    existing.durationWeeks = remoteNote.durationWeeks;
+    existing.kind = remoteNote.kind || "task";
+    existing.lane = remoteNote.lane || SWIM_LANES[0].id;
+    existing.importedFromCsv = !!remoteNote.importedFromCsv;
+    existing.importedFileName = remoteNote.importedFileName || null;
+    existing.requestSourceNoteId = remoteNote.requestSourceNoteId || null;
+    existing.requestMemo = remoteNote.requestMemo || "";
+    existing.requestDeclines = normalizeDeclineFeedback(remoteNote.requestDeclines);
+    updateNoteElement(existing);
   }
 
-  // Preserve locally-added notes that haven't synced back yet.
-  for (const [id, localNote] of state.notes) {
-    if ((localNote.kind || "task") === "deliverable") continue;
-    if (!remoteNoteIds.has(id) && !lastRemoteNoteIds.has(id)) {
-      // Locally added since last sync — keep it.
-      mergedNotes.set(id, localNote);
-    }
-    // If it was in lastRemoteNoteIds but not in remoteNoteIds it was deleted
-    // remotely — don't add it back.
-  }
-
-  // Update state
-  state.notes = mergedNotes;
   if (Array.isArray(remoteState.links)) {
     state.links = [...remoteState.links];
   }
-  if (remoteState.stageDurationWeeks) {
+  if (remoteState.stageDurationWeeks !== undefined) {
     state.stageDurationWeeks = remoteState.stageDurationWeeks;
   }
-  if (remoteState.finishDateMs) {
+  if (remoteState.finishDateMs !== undefined) {
     state.finishDateMs = remoteState.finishDateMs;
   }
-  if (remoteState.deliverables) {
+  if (remoteState.deliverables !== undefined) {
     state.deliverables = remoteState.deliverables;
   }
 
@@ -3572,6 +3614,7 @@ async function initializeBoard() {
     { id: uid("link"), a: [...state.notes.keys()][1], b: [...state.notes.keys()][2], type: "FS" },
   );
   renderLinks();
+  setupRealtimeSync();
   saveState();
 }
 
