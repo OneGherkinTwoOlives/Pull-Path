@@ -1,5 +1,6 @@
 const PROJECTS_KEY = "ts-projects";
-const CREATE_PROJECT_VERSION = "20260405";
+const CREATE_PROJECT_VERSION = "20260429";
+const INVITE_FUNCTION_NAME = "send-project-invite";
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
 const authSession = window.TSAuth.requireAuth(["super-admin", "project-admin"]);
@@ -70,6 +71,227 @@ if (!EDIT_PROJECT_ID) {
 let importedTasks = [];
 let importedCsvFileName = "";
 const customDisciplines = new Map();
+let pendingInviteEmails = [];
+
+function inviteStatusElement() {
+  return document.getElementById("invite-status");
+}
+
+function setInviteStatus(message, type = "") {
+  const el = inviteStatusElement();
+  if (!el) {
+    return;
+  }
+  el.textContent = message || "";
+  el.classList.remove("invite-status-success", "invite-status-error");
+  if (type === "success") {
+    el.classList.add("invite-status-success");
+  }
+  if (type === "error") {
+    el.classList.add("invite-status-error");
+  }
+}
+
+function getProjectNameForInvite() {
+  return String(document.getElementById("project-name-input")?.value || "").trim() || "Untitled Project";
+}
+
+function getAdminDisplayName() {
+  const sessionName = String(authSession?.name || "").trim();
+  if (sessionName) {
+    return sessionName;
+  }
+
+  const profile = window.TSData?.getUserProfileSync ? window.TSData.getUserProfileSync(authSession.email) : null;
+  const profileName = String(profile?.name || "").trim();
+  return profileName || authSession.email;
+}
+
+function getProjectAccessUrl(projectId = EDIT_PROJECT_ID) {
+  if (projectId) {
+    return new URL(`board.html?projectId=${encodeURIComponent(projectId)}`, window.location.href).toString();
+  }
+  return new URL("login.html", window.location.href).toString();
+}
+
+function getLogoUrl() {
+  return new URL("Logo-Vector.png", window.location.href).toString();
+}
+
+function teamEmailsFromRows() {
+  return [...document.querySelectorAll("#team-rows .email-row")]
+    .map((row) => window.TSAuth.normalizeEmail(row.dataset.email || ""))
+    .filter((email) => isValidEmail(email));
+}
+
+function updateInviteAllButtonState() {
+  const btn = document.getElementById("invite-all-btn");
+  if (!btn) {
+    return;
+  }
+  btn.disabled = teamEmailsFromRows().length === 0;
+}
+
+function openInviteModal(emails) {
+  const normalized = [...new Set((emails || []).map((email) => window.TSAuth.normalizeEmail(email)).filter((email) => isValidEmail(email)))];
+  if (!normalized.length) {
+    setInviteStatus("Add at least one valid email before inviting.", "error");
+    return;
+  }
+
+  pendingInviteEmails = normalized;
+  const modal = document.getElementById("invite-modal");
+  const meta = document.getElementById("invite-modal-meta");
+  const messageInput = document.getElementById("invite-message-input");
+  const projectName = getProjectNameForInvite();
+
+  if (meta) {
+    meta.textContent = normalized.length === 1
+      ? `Invite ${normalized[0]} to ${projectName}`
+      : `Invite ${normalized.length} team members to ${projectName}`;
+  }
+
+  if (messageInput) {
+    messageInput.value = "";
+  }
+
+  if (modal) {
+    modal.hidden = false;
+  }
+}
+
+function closeInviteModal() {
+  const modal = document.getElementById("invite-modal");
+  if (modal) {
+    modal.hidden = true;
+  }
+  pendingInviteEmails = [];
+}
+
+function inviteSubject(adminName, projectName) {
+  return `PullPath ${adminName} Invited you to ${projectName}`;
+}
+
+function inviteBodyText(adminName, projectName, projectUrl, inviteMessage) {
+  const base = `${adminName} has invited you to contribute to the ${projectName} pull path. Please click here to access: ${projectUrl}`;
+  const custom = String(inviteMessage || "").trim();
+  return custom ? `${base}\n\nMessage from ${adminName}:\n${custom}` : base;
+}
+
+function inviteBodyHtml(adminName, projectName, projectUrl, inviteMessage) {
+  const escapedMessage = String(inviteMessage || "").trim()
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/\n/g, "<br>");
+  const custom = escapedMessage ? `<p><strong>Message from ${adminName}:</strong><br>${escapedMessage}</p>` : "";
+
+  return `
+    <div style="font-family: Arial, sans-serif; color: #1f2a30; line-height: 1.45;">
+      <img src="${getLogoUrl()}" alt="PullPath" style="height: 56px; margin-bottom: 12px;" />
+      <p>${adminName} has invited you to contribute to the ${projectName} pull path. Please <a href="${projectUrl}">click here to access</a>.</p>
+      ${custom}
+    </div>
+  `;
+}
+
+async function sendInviteEmail({ toEmail, adminName, projectName, projectUrl, inviteMessage }) {
+  const config = window.TSSupabaseConfig || {};
+  const functionUrl = `${String(config.url || "").replace(/\/$/, "")}/functions/v1/${INVITE_FUNCTION_NAME}`;
+  if (!config.url || !config.anonKey) {
+    throw new Error("Supabase configuration is missing.");
+  }
+
+  const payload = {
+    toEmail,
+    subject: inviteSubject(adminName, projectName),
+    text: inviteBodyText(adminName, projectName, projectUrl, inviteMessage),
+    html: inviteBodyHtml(adminName, projectName, projectUrl, inviteMessage),
+    adminName,
+    projectName,
+    projectUrl,
+    logoUrl: getLogoUrl(),
+  };
+
+  const response = await fetch(functionUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: config.anonKey,
+      Authorization: `Bearer ${config.anonKey}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    throw new Error(body || `Invite API returned ${response.status}`);
+  }
+}
+
+function openMailtoFallback(emails, adminName, projectName, projectUrl, inviteMessage) {
+  const subject = encodeURIComponent(inviteSubject(adminName, projectName));
+  const body = encodeURIComponent(inviteBodyText(adminName, projectName, projectUrl, inviteMessage));
+  const to = emails.join(",");
+  window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
+}
+
+async function handleSendInvite() {
+  const emails = [...pendingInviteEmails];
+  if (!emails.length) {
+    closeInviteModal();
+    return;
+  }
+
+  const sendBtn = document.getElementById("invite-modal-send");
+  const message = String(document.getElementById("invite-message-input")?.value || "").trim();
+  const projectName = getProjectNameForInvite();
+  const adminName = getAdminDisplayName();
+  const projectUrl = getProjectAccessUrl();
+
+  if (sendBtn) {
+    sendBtn.disabled = true;
+  }
+
+  let successCount = 0;
+  const failed = [];
+
+  for (const email of emails) {
+    try {
+      await sendInviteEmail({
+        toEmail: email,
+        adminName,
+        projectName,
+        projectUrl,
+        inviteMessage: message,
+      });
+      successCount += 1;
+    } catch (err) {
+      console.error(`Invite failed for ${email}:`, err);
+      failed.push(email);
+    }
+  }
+
+  if (sendBtn) {
+    sendBtn.disabled = false;
+  }
+
+  closeInviteModal();
+
+  if (!failed.length) {
+    setInviteStatus(`Invite sent to ${successCount} team member${successCount === 1 ? "" : "s"}.`, "success");
+    return;
+  }
+
+  if (successCount > 0) {
+    setInviteStatus(`Sent ${successCount} invite${successCount === 1 ? "" : "s"}. Failed: ${failed.join(", ")}.`, "error");
+    return;
+  }
+
+  setInviteStatus("Invite service unavailable. Opening your email client as a fallback.", "error");
+  openMailtoFallback(emails, adminName, projectName, projectUrl, message);
+}
 
 function normalizeDisciplineName(value) {
   return String(value || "").trim().replace(/\s+/g, " ");
@@ -215,10 +437,10 @@ function renderDisciplineOptions(selectedValues = selectedDisciplines()) {
 
 function parseAndRenderTeamEmails(presetTeam = null) {
   const raw = document.getElementById("team-email-input").value;
-  const emails = raw
+  const emails = [...new Set(raw
     .split(",")
-    .map((e) => e.trim())
-    .filter((e) => e.length > 0);
+    .map((e) => window.TSAuth.normalizeEmail(e))
+    .filter((e) => e.length > 0))];
 
   const container = document.getElementById("team-rows");
 
@@ -241,9 +463,12 @@ function parseAndRenderTeamEmails(presetTeam = null) {
     row.innerHTML = `
       <span class="email-label">${email}</span>
       <select class="team-discipline">${disciplineOptionsHtml(disc)}</select>
+      <button class="secondary-btn invite-btn" type="button" data-email="${email}">Invite</button>
     `;
     container.appendChild(row);
   });
+
+  updateInviteAllButtonState();
 }
 
 function addCustomDisciplineFromInput() {
@@ -1038,6 +1263,22 @@ async function loadProjectForEdit(projectId) {
 applyRoleUi();
 renderDisciplines();
 document.getElementById("team-email-input").addEventListener("input", parseAndRenderTeamEmails);
+document.getElementById("team-rows").addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) {
+    return;
+  }
+  const inviteBtn = target.closest(".invite-btn");
+  if (!inviteBtn) {
+    return;
+  }
+
+  const email = window.TSAuth.normalizeEmail(inviteBtn.getAttribute("data-email") || "");
+  openInviteModal([email]);
+});
+document.getElementById("invite-all-btn").addEventListener("click", () => {
+  openInviteModal(teamEmailsFromRows());
+});
 document.getElementById("add-custom-discipline-btn").addEventListener("click", addCustomDisciplineFromInput);
 document.getElementById("custom-discipline-input").addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
@@ -1054,6 +1295,16 @@ document.getElementById("task-csv-select-btn").addEventListener("click", () => {
 });
 document.getElementById("task-csv-remove-btn").addEventListener("click", removeImportedTaskFile);
 updateTaskCsvUi();
+updateInviteAllButtonState();
+
+document.getElementById("invite-modal-close")?.addEventListener("click", closeInviteModal);
+document.getElementById("invite-modal-cancel")?.addEventListener("click", closeInviteModal);
+document.getElementById("invite-modal-send")?.addEventListener("click", handleSendInvite);
+document.getElementById("invite-modal")?.addEventListener("click", (event) => {
+  if (event.target === event.currentTarget) {
+    closeInviteModal();
+  }
+});
 
 // Wizard navigation
 document.querySelectorAll('button[data-action="next-page"]').forEach((btn) => {

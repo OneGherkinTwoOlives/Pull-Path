@@ -445,6 +445,17 @@ h2 { margin: 0 0 0.55rem; font-size: 1.1rem; }
   margin-top: 0.5rem;
 }
 
+.field-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.field-header-row .field {
+  margin-bottom: 0;
+}
+
 .email-row {
   display: flex;
   align-items: center;
@@ -470,6 +481,18 @@ h2 { margin: 0 0 0.55rem; font-size: 1.1rem; }
   padding: 0.38rem 0.42rem;
   font: inherit;
   min-width: 160px;
+}
+
+.email-row .invite-btn {
+  flex-shrink: 0;
+}
+
+.invite-status-success {
+  color: #1f7a39;
+}
+
+.invite-status-error {
+  color: #9d2b2b;
 }
 
 .actions-row { display: flex; justify-content: space-between; align-items: center; }
