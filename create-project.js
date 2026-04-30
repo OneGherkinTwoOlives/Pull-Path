@@ -59,6 +59,14 @@ function getProjectIdFromUrl() {
 }
 
 const EDIT_PROJECT_ID = getProjectIdFromUrl();
+const PENDING_PROJECT_ID_KEY = "ts-pending-project-id";
+// In create mode, generate a stable ID once and persist it in sessionStorage.
+// This prevents duplicate rows if the form is submitted more than once.
+if (!EDIT_PROJECT_ID) {
+  if (!sessionStorage.getItem(PENDING_PROJECT_ID_KEY)) {
+    sessionStorage.setItem(PENDING_PROJECT_ID_KEY, uid());
+  }
+}
 let importedTasks = [];
 let importedCsvFileName = "";
 const customDisciplines = new Map();
@@ -846,6 +854,10 @@ async function submitForm(event) {
     return;
   }
 
+  const submitBtn = event.target.querySelector('button[type="submit"]');
+  if (submitBtn) submitBtn.disabled = true;
+
+  try {
   const name = document.getElementById("project-name-input").value.trim();
   const startDate = document.getElementById("project-start-date").value;
   const durationWeeks = Number(document.getElementById("project-duration").value);
@@ -908,7 +920,7 @@ async function submitForm(event) {
   } else {
     // Create mode — build a brand-new project
     const project = {
-      id: uid(),
+      id: sessionStorage.getItem(PENDING_PROJECT_ID_KEY) || uid(),
       name,
       startDate,
       durationWeeks,
@@ -950,8 +962,14 @@ async function submitForm(event) {
       importedTaskCsvName: importedCsvFileName || null,
     });
 
+    sessionStorage.removeItem(PENDING_PROJECT_ID_KEY);
     localStorage.setItem("ts-active-project-id", project.id);
     window.location.href = `board.html?projectId=${encodeURIComponent(project.id)}`;
+  }
+  } catch (err) {
+    console.error("Failed to save project:", err);
+    alert("An error occurred while saving the project. Please try again.");
+    if (submitBtn) submitBtn.disabled = false;
   }
 }
 
