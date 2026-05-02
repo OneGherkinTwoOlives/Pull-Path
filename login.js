@@ -25,6 +25,12 @@ const cancelResetBtn = document.getElementById("cancel-reset-btn");
 const signupDisciplineSelect = document.getElementById("signup-discipline");
 const signupDisciplineOtherField = document.getElementById("signup-discipline-other-field");
 const signupDisciplineOtherInput = document.getElementById("signup-discipline-other");
+const termsModal = document.getElementById("terms-modal");
+const openTermsBtn = document.getElementById("open-terms-btn");
+const closeTermsBtn = document.getElementById("close-terms-btn");
+const acceptTermsBtn = document.getElementById("accept-terms-btn");
+const declineTermsBtn = document.getElementById("decline-terms-btn");
+const termsCheckbox = document.getElementById("signup-terms-checkbox");
 
 const DISCIPLINES = [
   "Architect",
@@ -116,6 +122,20 @@ function updateSignupDisciplineOtherState() {
   signupDisciplineOtherInput.value = "";
 }
 
+function openTermsModal() {
+  if (!termsModal) {
+    return;
+  }
+  termsModal.hidden = false;
+}
+
+function closeTermsModal() {
+  if (!termsModal) {
+    return;
+  }
+  termsModal.hidden = true;
+}
+
 function openForgotModal() {
   if (!forgotModal) {
     return;
@@ -182,6 +202,20 @@ loginForm.addEventListener("submit", async (event) => {
 openSignupBtn?.addEventListener("click", openSignupModal);
 closeSignupBtn?.addEventListener("click", closeSignupModal);
 cancelSignupBtn?.addEventListener("click", closeSignupModal);
+openTermsBtn?.addEventListener("click", openTermsModal);
+closeTermsBtn?.addEventListener("click", closeTermsModal);
+declineTermsBtn?.addEventListener("click", closeTermsModal);
+acceptTermsBtn?.addEventListener("click", () => {
+  if (termsCheckbox) {
+    termsCheckbox.checked = true;
+  }
+  closeTermsModal();
+});
+termsModal?.addEventListener("click", (event) => {
+  if (event.target === termsModal) {
+    closeTermsModal();
+  }
+});
 openForgotBtn?.addEventListener("click", openForgotModal);
 closeForgotBtn?.addEventListener("click", closeForgotModal);
 cancelForgotBtn?.addEventListener("click", closeForgotModal);
@@ -209,6 +243,11 @@ resetModal?.addEventListener("click", (event) => {
 
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") {
+    return;
+  }
+
+  if (termsModal && !termsModal.hidden) {
+    closeTermsModal();
     return;
   }
 
@@ -305,6 +344,11 @@ signupForm?.addEventListener("submit", async (event) => {
 
   if (password !== confirmPassword) {
     setStatus(signupStatusEl, "Password and confirmation do not match.", "error");
+    return;
+  }
+
+  if (!termsCheckbox?.checked) {
+    setStatus(signupStatusEl, "You must agree to the Terms and Conditions to create an account.", "error");
     return;
   }
 

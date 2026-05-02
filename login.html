@@ -100,6 +100,10 @@
             </label>
           </div>
           <p class="field-hint">Password must be at least 6 characters and include one capital letter and one symbol.</p>
+          <label class="field-terms-row">
+            <input id="signup-terms-checkbox" type="checkbox" />
+            <span>I have read and agree to the <button id="open-terms-btn" class="text-link-btn" type="button">Terms and Conditions</button></span>
+          </label>
           <div id="signup-status" class="csv-status" aria-live="polite"></div>
           <div class="actions-row auth-actions">
             <button id="cancel-signup-btn" class="secondary-btn" type="button">Cancel</button>
@@ -155,6 +159,73 @@
             <button class="primary-btn" type="submit">Update Password</button>
           </div>
         </form>
+      </div>
+    </div>
+    <div id="terms-modal" class="modal-backdrop" hidden>
+      <div class="modal-card terms-modal-card">
+        <div class="modal-header">
+          <div>
+            <h2>Terms and Conditions</h2>
+            <p class="muted">Effective Date: May 1, 2026</p>
+          </div>
+          <button id="close-terms-btn" class="modal-close-btn" type="button" aria-label="Close terms dialog">×</button>
+        </div>
+        <div class="terms-modal-body">
+          <h3>1. Acceptance of Terms</h3>
+          <p>By creating an account or using Pull Path ("the Service"), you ("User") agree to be bound by these Terms and Conditions ("Terms"). If you do not agree, do not create an account or use the Service. These Terms constitute a legally binding agreement between you and Pull Path ("we," "us," or "our").</p>
+
+          <h3>2. Description of Service</h3>
+          <p>Pull Path is a web-based pull planning and project scheduling tool that enables users to create and collaborate on construction project timelines, manage tasks, and coordinate with team members. The Service is provided "as is" and may be updated, modified, or discontinued at any time without prior notice.</p>
+
+          <h3>3. Account Registration and Security</h3>
+          <p>You must provide accurate, complete, and current information when creating an account. You are responsible for maintaining the confidentiality of your login credentials and for all activity that occurs under your account. You must notify us immediately at support@pullpath.live of any unauthorized access or security breach. We reserve the right to suspend or terminate accounts that contain false information or violate these Terms.</p>
+
+          <h3>4. Acceptable Use</h3>
+          <p>You agree not to: (a) use the Service for any unlawful, harmful, or fraudulent purpose; (b) upload or transmit malicious code, viruses, or content that infringes third-party rights; (c) attempt to gain unauthorized access to the Service or other users' accounts; (d) reverse engineer, copy, or create derivative works from the Service; (e) use automated means to scrape, crawl, or extract data from the Service; or (f) harass, abuse, or harm other users of the Service.</p>
+
+          <h3>5. Intellectual Property</h3>
+          <p>All software, designs, trademarks, and content comprising the Service are owned by or licensed to Pull Path and are protected by applicable intellectual property laws. You are granted a limited, non-exclusive, non-transferable, revocable licence to use the Service solely for its intended purpose. You retain full ownership of any project data and content you create within the Service.</p>
+
+          <h3>6. User Content</h3>
+          <p>You are solely responsible for the content you upload or create within the Service ("User Content"). By using the Service, you grant Pull Path a non-exclusive, royalty-free licence to store and process your User Content solely as necessary to provide the Service. We do not claim ownership of your User Content and will not share it with third parties except as required by law or as described in our Privacy Policy.</p>
+
+          <h3>7. Privacy and Data</h3>
+          <p>Your use of the Service is governed by our Privacy Policy. By using the Service, you consent to the collection and use of your information as described therein. We implement reasonable administrative, technical, and physical security measures to protect your personal data, but cannot guarantee absolute security. You acknowledge that no method of electronic transmission or storage is 100% secure.</p>
+
+          <h3>8. Disclaimer of Warranties</h3>
+          <p>THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, OR NON-INFRINGEMENT. WE DO NOT WARRANT THAT THE SERVICE WILL BE UNINTERRUPTED, ERROR-FREE, SECURE, OR FREE FROM HARMFUL COMPONENTS. YOUR USE OF THE SERVICE IS AT YOUR SOLE RISK.</p>
+
+          <h3>9. Limitation of Liability</h3>
+          <p>TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, PULL PATH AND ITS OFFICERS, DIRECTORS, EMPLOYEES, AND AGENTS SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING LOSS OF PROFITS, LOSS OF DATA, BUSINESS INTERRUPTION, OR LOSS OF GOODWILL, ARISING OUT OF OR IN CONNECTION WITH YOUR USE OF OR INABILITY TO USE THE SERVICE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES. IN NO EVENT SHALL OUR TOTAL AGGREGATE LIABILITY TO YOU EXCEED THE GREATER OF ONE HUNDRED CANADIAN DOLLARS (CAD $100) OR THE AMOUNT PAID BY YOU FOR THE SERVICE IN THE TWELVE (12) MONTHS PRECEDING THE CLAIM.</p>
+
+          <h3>10. Indemnification</h3>
+          <p>You agree to indemnify, defend, and hold harmless Pull Path and its affiliates, officers, directors, employees, and agents from and against any and all claims, liabilities, damages, losses, costs, and expenses (including reasonable legal fees) arising out of or in any way connected with: (a) your use of or access to the Service; (b) your violation of these Terms; (c) your violation of any applicable law or regulation; or (d) your infringement of any third-party rights.</p>
+
+          <h3>11. Termination</h3>
+          <p>We may suspend or terminate your account and access to the Service at any time, with or without cause or notice, including for breach of these Terms or conduct we determine is harmful to other users or the Service. Upon termination, your right to use the Service ceases immediately. You may request deletion of your account at any time by contacting support@pullpath.live. Provisions of these Terms that by their nature should survive termination shall remain in effect.</p>
+
+          <h3>12. Third-Party Services</h3>
+          <p>The Service may integrate with or link to third-party services (such as email delivery providers or authentication services). We are not responsible for the content, privacy practices, or reliability of third-party services. Your use of third-party services is governed by their respective terms and policies.</p>
+
+          <h3>13. Changes to Terms</h3>
+          <p>We reserve the right to modify these Terms at any time. We will provide reasonable notice of material changes by updating the effective date at the top of this document or by other means we deem appropriate. Your continued use of the Service after the effective date of any changes constitutes your acceptance of the updated Terms.</p>
+
+          <h3>14. Governing Law and Dispute Resolution</h3>
+          <p>These Terms are governed by and construed in accordance with the laws of the Province of British Columbia, Canada, without regard to its conflict of law provisions. You consent to the exclusive jurisdiction of the courts located in British Columbia for any disputes arising out of or relating to these Terms or your use of the Service.</p>
+
+          <h3>15. Severability</h3>
+          <p>If any provision of these Terms is found to be invalid, illegal, or unenforceable by a court of competent jurisdiction, that provision shall be limited or eliminated to the minimum extent necessary, and the remaining provisions shall continue in full force and effect.</p>
+
+          <h3>16. Entire Agreement</h3>
+          <p>These Terms, together with our Privacy Policy, constitute the entire agreement between you and Pull Path with respect to the Service and supersede all prior and contemporaneous agreements, understandings, and communications, whether written or oral, relating to the Service.</p>
+
+          <h3>17. Contact</h3>
+          <p>If you have any questions about these Terms, please contact us at: <strong>support@pullpath.live</strong></p>
+        </div>
+        <div class="actions-row auth-actions">
+          <button id="accept-terms-btn" class="primary-btn" type="button">I Agree</button>
+          <button id="decline-terms-btn" class="secondary-btn" type="button">Close</button>
+        </div>
       </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

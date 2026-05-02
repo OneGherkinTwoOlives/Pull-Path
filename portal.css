@@ -166,6 +166,50 @@ h2 { margin: 0 0 0.55rem; font-size: 1.1rem; }
   width: min(760px, 100%);
 }
 
+.terms-modal-card {
+  width: min(680px, 100%);
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}
+
+.terms-modal-body {
+  overflow-y: auto;
+  flex: 1;
+  padding: 0.5rem 0.25rem 1rem;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: #374151;
+}
+
+.terms-modal-body h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 1.1rem 0 0.3rem;
+  color: #111827;
+}
+
+.terms-modal-body p {
+  margin: 0 0 0.5rem;
+}
+
+.field-terms-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.92rem;
+  color: #374151;
+  margin: 0.5rem 0;
+}
+
+.field-terms-row input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+
 .signup-grid-row {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }

@@ -1140,6 +1140,7 @@ main {
   box-shadow:
     0 10px 20px rgba(0, 0, 0, 0.18),
     0 0 0 2px rgba(185, 28, 28, 0.42);
+  min-height: 0;
 }
 
 .note.deliverable-note .note-content {
