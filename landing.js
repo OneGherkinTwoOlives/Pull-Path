@@ -91,7 +91,8 @@ function buildTaktCsv(project, boardState) {
       .join(", ");
 
     return [
-      `#${orderById.get(note.id) || "?"} ${(note.text || "Untitled").split(/\r?\n/)[0]}`,
+      orderById.get(note.id) || "",
+      (note.text || "Untitled").split(/\r?\n/)[0],
       disciplineNameForLane(project, note.lane),
       formatUtcDate(startMs),
       formatUtcDate(endMs),
@@ -100,7 +101,7 @@ function buildTaktCsv(project, boardState) {
     ];
   });
 
-  const header = ["Task Name", "Discipline", "Start Date", "End Date", "Duration (weeks)", "Predecessors"];
+  const header = ["Task #", "Task Name", "Discipline", "Start Date", "End Date", "Duration (weeks)", "Predecessors"];
   const lines = [header, ...rows].map((row) => row.map(csvEscape).join(","));
   return lines.join("\n");
 }
