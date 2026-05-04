@@ -1300,11 +1300,6 @@ updateInviteAllButtonState();
 document.getElementById("invite-modal-close")?.addEventListener("click", closeInviteModal);
 document.getElementById("invite-modal-cancel")?.addEventListener("click", closeInviteModal);
 document.getElementById("invite-modal-send")?.addEventListener("click", handleSendInvite);
-document.getElementById("invite-modal")?.addEventListener("click", (event) => {
-  if (event.target === event.currentTarget) {
-    closeInviteModal();
-  }
-});
 
 // Wizard navigation
 document.querySelectorAll('button[data-action="next-page"]').forEach((btn) => {
