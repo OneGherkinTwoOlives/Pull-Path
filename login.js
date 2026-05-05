@@ -275,12 +275,6 @@ closeResetBtn?.addEventListener("click", closeResetModal);
 cancelResetBtn?.addEventListener("click", closeResetModal);
 signupDisciplineSelect?.addEventListener("change", updateSignupDisciplineOtherState);
 
-signupModal?.addEventListener("click", (event) => {
-  if (event.target === signupModal) {
-    closeSignupModal();
-  }
-});
-
 forgotModal?.addEventListener("click", (event) => {
   if (event.target === forgotModal) {
     closeForgotModal();
