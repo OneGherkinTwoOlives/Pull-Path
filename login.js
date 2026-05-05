@@ -23,6 +23,8 @@ const resetPasswordInput = document.getElementById("reset-password");
 const resetConfirmInput = document.getElementById("reset-confirm-password");
 const closeResetBtn = document.getElementById("close-reset-btn");
 const cancelResetBtn = document.getElementById("cancel-reset-btn");
+const signupSuccessModal = document.getElementById("signup-success-modal");
+const signupSuccessOkBtn = document.getElementById("signup-success-ok-btn");
 const signupDisciplineSelect = document.getElementById("signup-discipline");
 const signupDisciplineOtherField = document.getElementById("signup-discipline-other-field");
 const signupDisciplineOtherInput = document.getElementById("signup-discipline-other");
@@ -221,6 +223,20 @@ function closeResetModal() {
   setStatus(resetStatusEl, "");
 }
 
+function openSignupSuccessModal() {
+  if (!signupSuccessModal) {
+    return;
+  }
+  signupSuccessModal.hidden = false;
+}
+
+function closeSignupSuccessModal() {
+  if (!signupSuccessModal) {
+    return;
+  }
+  signupSuccessModal.hidden = true;
+}
+
 const isRecoveryLink = !!window.TSAuth.isRecoveryLink?.();
 
 const existingSession = window.TSAuth.getSession();
@@ -273,6 +289,7 @@ closeForgotBtn?.addEventListener("click", closeForgotModal);
 cancelForgotBtn?.addEventListener("click", closeForgotModal);
 closeResetBtn?.addEventListener("click", closeResetModal);
 cancelResetBtn?.addEventListener("click", closeResetModal);
+signupSuccessOkBtn?.addEventListener("click", closeSignupSuccessModal);
 signupDisciplineSelect?.addEventListener("change", updateSignupDisciplineOtherState);
 
 forgotModal?.addEventListener("click", (event) => {
@@ -294,6 +311,11 @@ document.addEventListener("keydown", (event) => {
 
   if (termsModal && !termsModal.hidden) {
     closeTermsModal();
+    return;
+  }
+
+  if (signupSuccessModal && !signupSuccessModal.hidden) {
+    closeSignupSuccessModal();
     return;
   }
 
@@ -399,7 +421,7 @@ signupForm?.addEventListener("submit", async (event) => {
   }
 
   try {
-    const result = await window.TSAuth.signUpAccount({
+    await window.TSAuth.signUpAccount({
       company,
       disciplineTrade,
       name,
@@ -408,9 +430,8 @@ signupForm?.addEventListener("submit", async (event) => {
       address,
       password,
     });
-    setStatus(signupStatusEl, result.message || "Check your email to confirm your account.", "success");
-    signupForm.reset();
-    updateSignupDisciplineOtherState();
+    closeSignupModal();
+    openSignupSuccessModal();
   } catch (error) {
     console.error("Failed to create account:", error);
     setStatus(signupStatusEl, error.message || "Unable to create account.", "error");

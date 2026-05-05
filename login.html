@@ -162,6 +162,17 @@
         </form>
       </div>
     </div>
+    <div id="signup-success-modal" class="modal-backdrop" hidden>
+      <div class="modal-card board-modal-card-narrow">
+        <div class="modal-header">
+          <h2>Account Created</h2>
+        </div>
+        <p>Check your email for a confirmation link before logging in.</p>
+        <div class="actions-row auth-actions">
+          <button id="signup-success-ok-btn" class="primary-btn" type="button">OK</button>
+        </div>
+      </div>
+    </div>
     <div id="terms-modal" class="modal-backdrop" hidden>
       <div class="modal-card terms-modal-card">
         <div class="modal-header">
@@ -233,6 +244,6 @@
     <script src="supabase-config.js?v=1"></script>
     <script src="data-store.js?v=4"></script>
     <script src="auth.js?v=16"></script>
-    <script src="login.js?v=5"></script>
+    <script src="login.js?v=6"></script>
   </body>
 </html>
