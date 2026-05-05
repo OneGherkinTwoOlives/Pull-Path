@@ -125,7 +125,7 @@ const TSData = (() => {
   function normalizeAdminAccountRow(row) {
     return {
       email: row.email,
-      password: row.password || "123",
+      password: row.password || null,
       company: row.company || "",
       position: row.position || "",
       telephoneNumbers: Array.isArray(row.telephone_numbers) ? row.telephone_numbers : [],
@@ -170,7 +170,7 @@ const TSData = (() => {
   function serializeAdminAccount(account) {
     return {
       email: account.email,
-      password: account.password || "123",
+      password: account.password || null,
       company: account.company || null,
       position: account.position || null,
       telephone_numbers: Array.isArray(account.telephoneNumbers) ? account.telephoneNumbers : [],

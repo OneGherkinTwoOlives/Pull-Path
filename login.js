@@ -2,6 +2,7 @@ const loginForm = document.getElementById("login-form");
 const emailInput = document.getElementById("login-email");
 const passwordInput = document.getElementById("login-password");
 const errorEl = document.getElementById("login-error");
+const inviteStatusEl = document.getElementById("login-invite-status");
 const signupModal = document.getElementById("signup-modal");
 const signupForm = document.getElementById("signup-form");
 const signupStatusEl = document.getElementById("signup-status");
@@ -56,6 +57,53 @@ const DISCIPLINES = [
   "Waste",
   "Wind",
 ];
+
+function normalizeEmailValue(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function inviteContext() {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    isInvite: params.get("invite") === "1",
+    invitedEmail: normalizeEmailValue(params.get("email")),
+    projectId: String(params.get("projectId") || "").trim(),
+  };
+}
+
+async function applyInviteContext() {
+  const context = inviteContext();
+  if (!context.isInvite || !context.invitedEmail) {
+    return;
+  }
+
+  emailInput.value = context.invitedEmail;
+  const signupEmailInput = document.getElementById("signup-email");
+  if (signupEmailInput) {
+    signupEmailInput.value = context.invitedEmail;
+  }
+
+  if (window.TSData?.initialize) {
+    await window.TSData.initialize();
+  }
+
+  const existingProfile = window.TSData?.fetchUserProfile
+    ? await window.TSData.fetchUserProfile(context.invitedEmail)
+    : null;
+  const existingAdminAccount = window.TSData?.fetchAdminAccount
+    ? await window.TSData.fetchAdminAccount(context.invitedEmail)
+    : null;
+  const hasExistingAccount = !!(existingProfile?.authUserId || String(existingAdminAccount?.password || "").trim());
+
+  if (hasExistingAccount) {
+    setStatus(inviteStatusEl, "You were invited to a PullPath project. Log in with your existing account to continue.", "success");
+    passwordInput.focus();
+    return;
+  }
+
+  setStatus(inviteStatusEl, "You were invited to a PullPath project. Create your account to get started.", "success");
+  openSignupModal();
+}
 
 function setStatus(element, message, kind = "") {
   if (!element) {
@@ -184,6 +232,10 @@ if (isRecoveryLink) {
   openResetModal();
   setStatus(resetStatusEl, "Recovery link verified. Set your new password.");
 }
+
+applyInviteContext().catch((error) => {
+  console.error("Failed to apply invite context:", error);
+});
 
 loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();

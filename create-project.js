@@ -107,7 +107,18 @@ function getAdminDisplayName() {
   return profileName || authSession.email;
 }
 
-function getProjectAccessUrl(projectId = EDIT_PROJECT_ID) {
+function getProjectAccessUrl(projectId = EDIT_PROJECT_ID, inviteEmail = "") {
+  const normalizedInviteEmail = window.TSAuth.normalizeEmail(inviteEmail);
+  if (normalizedInviteEmail) {
+    const url = new URL("login.html", window.location.href);
+    url.searchParams.set("invite", "1");
+    url.searchParams.set("email", normalizedInviteEmail);
+    if (projectId) {
+      url.searchParams.set("projectId", projectId);
+    }
+    return url.toString();
+  }
+
   if (projectId) {
     return new URL(`board.html?projectId=${encodeURIComponent(projectId)}`, window.location.href).toString();
   }
@@ -173,7 +184,7 @@ function inviteSubject(adminName, projectName) {
 }
 
 function inviteBodyText(adminName, projectName, projectUrl, inviteMessage) {
-  const base = `${adminName} has invited you to contribute to the ${projectName} pull path. Please click here to access: ${projectUrl}`;
+  const base = `${adminName} has invited you to contribute to the ${projectName} pull path. Please click here to access: ${projectUrl}\n\nIf this is your first time using PullPath, create your account with this email address. If you already have an account, log in with your existing password.`;
   const custom = String(inviteMessage || "").trim();
   return custom ? `${base}\n\nMessage from ${adminName}:\n${custom}` : base;
 }
@@ -191,6 +202,7 @@ function inviteBodyHtml(adminName, projectName, projectUrl, inviteMessage) {
     <div style="font-family: Arial, sans-serif; color: #1f2a30; line-height: 1.45;">
       <img src="${getLogoUrl()}" alt="PullPath" style="height: 56px; margin-bottom: 12px;" />
       <p>${adminName} has invited you to contribute to the ${projectName} pull path. Please <a href="${projectUrl}">click here to access</a>.</p>
+      <p>If this is your first time using PullPath, create your account with this email address. If you already have an account, log in with your existing password.</p>
       ${custom}
     </div>
   `;
@@ -248,8 +260,6 @@ async function handleSendInvite() {
   const message = String(document.getElementById("invite-message-input")?.value || "").trim();
   const projectName = getProjectNameForInvite();
   const adminName = getAdminDisplayName();
-  const projectUrl = getProjectAccessUrl();
-
   if (sendBtn) {
     sendBtn.disabled = true;
   }
@@ -259,6 +269,7 @@ async function handleSendInvite() {
 
   for (const email of emails) {
     try {
+      const projectUrl = getProjectAccessUrl(EDIT_PROJECT_ID, email);
       await sendInviteEmail({
         toEmail: email,
         adminName,

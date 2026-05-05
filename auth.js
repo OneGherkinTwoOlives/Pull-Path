@@ -2,7 +2,6 @@ const TSAuth = (() => {
   const SESSION_KEY = "ts-auth-session";
   const PROJECTS_KEY = "ts-projects";
   const SUPER_ADMIN_EMAIL = "tschmitt@marcon.ca";
-  const DEFAULT_PASSWORD = "123";
   const PASSWORD_RULE = /^(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{6,}$/;
   const config = window.TSSupabaseConfig || {};
   const isSupabaseConfigured = !!(window.supabase && config.url && config.anonKey);
@@ -168,7 +167,7 @@ const TSAuth = (() => {
 
   async function resolveAdminPassword(email) {
     const account = await resolveAdminAccount(email);
-    return account?.password || DEFAULT_PASSWORD;
+    return String(account?.password || "").trim();
   }
 
   async function signUpAccount(details) {
@@ -397,6 +396,9 @@ const TSAuth = (() => {
 
     if (normalizedEmail === SUPER_ADMIN_EMAIL) {
       const expectedPassword = await resolveAdminPassword(normalizedEmail);
+      if (!expectedPassword) {
+        return { ok: false, message: "No account exists for this email yet. Use Create Account to get started." };
+      }
       if (password !== expectedPassword) {
         return { ok: false, message: "Invalid password." };
       }
@@ -413,6 +415,9 @@ const TSAuth = (() => {
     const projectAdminProjects = projectAdminAssignments(normalizedEmail);
     if (projectAdminProjects.length > 0) {
       const expectedPassword = await resolveAdminPassword(normalizedEmail);
+      if (!expectedPassword) {
+        return { ok: false, message: "No account exists for this email yet. Use Create Account to get started." };
+      }
       if (password !== expectedPassword) {
         return { ok: false, message: "Invalid password." };
       }
@@ -433,6 +438,9 @@ const TSAuth = (() => {
     }
 
     const expectedPassword = await resolveAdminPassword(normalizedEmail);
+    if (!expectedPassword) {
+      return { ok: false, message: "No account exists for this email yet. Use Create Account to get started." };
+    }
     if (password !== expectedPassword) {
       return { ok: false, message: "Invalid password." };
     }
@@ -471,7 +479,7 @@ const TSAuth = (() => {
   return {
     ADMIN_EMAIL: SUPER_ADMIN_EMAIL,
     SUPER_ADMIN_EMAIL,
-    DEFAULT_PASSWORD,
+    normalizeEmail,
     passwordMeetsRequirements,
     authenticate,
     signUpAccount,
