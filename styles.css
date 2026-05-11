@@ -413,6 +413,12 @@ h1[contenteditable="true"]:focus {
   box-shadow: 0 5px 12px rgba(0, 0, 0, 0.28);
 }
 
+.btn-magnetic {
+  background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+  color: #fff;
+  box-shadow: 0 5px 12px rgba(79, 70, 229, 0.34);
+}
+
 .prerequisite-menu {
   background: rgba(17, 17, 17, 0.97);
   border: 1px solid rgba(255, 255, 255, 0.14);

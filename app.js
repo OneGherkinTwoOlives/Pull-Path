@@ -33,6 +33,7 @@ const saveBtn = document.getElementById("save-btn");
 const homeBtn = document.getElementById("home-btn");
 const logoutBtn = document.getElementById("logout-btn");
 const scheduleToggleBtn = document.getElementById("schedule-toggle-btn");
+const magneticEndBtn = document.getElementById("magnetic-end-btn");
 const schedulePanel = document.getElementById("schedule-panel");
 const scheduleTableBody = document.getElementById("schedule-table-body");
 const projectNameEl = document.getElementById("project-name");
@@ -1431,6 +1432,175 @@ function enforceAllFinishStartLinks() {
       pushLinkedSuccessorsForward(link.a);
     }
   });
+}
+
+function magneticEligibleNotes() {
+  return [...state.notes.values()].filter((note) => !["prerequisite", "deliverable"].includes(note.kind || "task"));
+}
+
+function groupMagneticStartSyncNotes(notes) {
+  const parent = new Map(notes.map((note) => [note.id, note.id]));
+
+  function find(noteId) {
+    const currentParent = parent.get(noteId);
+    if (!currentParent || currentParent === noteId) {
+      return noteId;
+    }
+    const rootId = find(currentParent);
+    parent.set(noteId, rootId);
+    return rootId;
+  }
+
+  function union(leftId, rightId) {
+    const leftRoot = find(leftId);
+    const rightRoot = find(rightId);
+    if (leftRoot !== rightRoot) {
+      parent.set(rightRoot, leftRoot);
+    }
+  }
+
+  state.links.forEach((link) => {
+    if (relationshipType(link) !== "SS") {
+      return;
+    }
+    if (!parent.has(link.a) || !parent.has(link.b)) {
+      return;
+    }
+    union(link.a, link.b);
+  });
+
+  const groups = new Map();
+  const noteToGroup = new Map();
+
+  notes.forEach((note) => {
+    const groupId = find(note.id);
+    if (!groups.has(groupId)) {
+      groups.set(groupId, { id: groupId, members: [], latestStart: Infinity });
+    }
+    groups.get(groupId).members.push(note);
+    noteToGroup.set(note.id, groupId);
+  });
+
+  return { groups, noteToGroup };
+}
+
+function applyMagneticEnd() {
+  const movableNotes = magneticEligibleNotes();
+  if (movableNotes.length === 0) {
+    setStatus("No movable tasks available for Magnetic-End.");
+    return;
+  }
+
+  const { groups, noteToGroup } = groupMagneticStartSyncNotes(movableNotes);
+  const minStart = stageStartX();
+  const finishX = stageFinishX();
+
+  groups.forEach((group) => {
+    const groupLatest = group.members.reduce((latest, note) => {
+      const noteLatest = finishX - weeksToPixels(noteDurationWeeks(note));
+      return Math.min(latest, noteLatest);
+    }, Infinity);
+    group.latestStart = groupLatest;
+  });
+
+  for (const link of state.links) {
+    if (relationshipType(link) !== "FS") {
+      continue;
+    }
+
+    const predecessor = state.notes.get(link.a);
+    const successor = state.notes.get(link.b);
+    if (!predecessor || !successor) {
+      continue;
+    }
+
+    if ((successor.kind || "task") === "deliverable") {
+      continue;
+    }
+
+    if (!noteToGroup.has(predecessor.id) || !noteToGroup.has(successor.id)) {
+      continue;
+    }
+
+    if (noteToGroup.get(predecessor.id) === noteToGroup.get(successor.id)) {
+      setStatus("Magnetic-End cannot solve mixed FS and SS constraints inside the same note group.");
+      return;
+    }
+  }
+
+  const fsLinks = state.links.filter((link) => {
+    if (relationshipType(link) !== "FS") {
+      return false;
+    }
+    const predecessor = state.notes.get(link.a);
+    const successor = state.notes.get(link.b);
+    if (!predecessor || !successor) {
+      return false;
+    }
+    return noteToGroup.has(predecessor.id);
+  });
+
+  let changed = false;
+  for (let iteration = 0; iteration < groups.size; iteration += 1) {
+    changed = false;
+
+    fsLinks.forEach((link) => {
+      const predecessor = state.notes.get(link.a);
+      const predecessorGroup = groups.get(noteToGroup.get(link.a));
+      const successor = state.notes.get(link.b);
+      if (!predecessor || !predecessorGroup || !successor) {
+        return;
+      }
+
+      let successorLatestStart = null;
+      if ((successor.kind || "task") === "deliverable") {
+        successorLatestStart = finishX;
+      } else {
+        const successorGroup = groups.get(noteToGroup.get(link.b));
+        if (!successorGroup) {
+          return;
+        }
+        successorLatestStart = successorGroup.latestStart;
+      }
+
+      const candidateStart = successorLatestStart - weeksToPixels(noteDurationWeeks(predecessor));
+      if (candidateStart < predecessorGroup.latestStart - 0.5) {
+        predecessorGroup.latestStart = candidateStart;
+        changed = true;
+      }
+    });
+
+    if (!changed) {
+      break;
+    }
+  }
+
+  if (changed) {
+    setStatus("Magnetic-End found a dependency cycle and could not finish the pull-to-end layout.");
+    return;
+  }
+
+  groups.forEach((group) => {
+    const groupMaxStart = group.members.reduce((maxStart, note) => {
+      const noteMaxStart = finishX - weeksToPixels(noteDurationWeeks(note));
+      return Math.min(maxStart, noteMaxStart);
+    }, Infinity);
+
+    let nextStart = clamp(group.latestStart, minStart, groupMaxStart);
+    if (state.snapToWeek) {
+      nextStart = snapStartToMondayWithinBounds(nextStart, minStart, groupMaxStart);
+    }
+
+    group.members.forEach((note) => {
+      positionNoteByStart(note, nextStart);
+      updateNoteElement(note);
+    });
+  });
+
+  refreshLayout();
+  renderLinks();
+  saveState();
+  setStatus("Magnetic-End applied. Tasks were pulled to the latest dependency-safe positions.");
 }
 
 function predecessorEndBound(noteId) {
@@ -3289,6 +3459,12 @@ if (scheduleToggleBtn && schedulePanel) {
     schedulePanel.hidden = nextHidden;
     scheduleToggleBtn.setAttribute("aria-expanded", String(!nextHidden));
     scheduleToggleBtn.textContent = nextHidden ? "Show Takt Schedule" : "Hide Takt Schedule";
+  });
+}
+
+if (magneticEndBtn) {
+  magneticEndBtn.addEventListener("click", () => {
+    applyMagneticEnd();
   });
 }
 
