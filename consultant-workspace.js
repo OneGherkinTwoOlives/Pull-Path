@@ -24,7 +24,8 @@ function renderAssignments() {
 
   projectMap.forEach((entry, projectId) => {
     const li = document.createElement("li");
-    li.className = "project-item-row";
+    const row = document.createElement("div");
+    row.className = "project-item-row";
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "project-item-btn";
@@ -34,7 +35,19 @@ function renderAssignments() {
       localStorage.setItem("ts-active-project-id", projectId);
       window.location.href = `board.html?projectId=${encodeURIComponent(projectId)}`;
     });
-    li.appendChild(btn);
+
+    const testBoardBtn = document.createElement("button");
+    testBoardBtn.type = "button";
+    testBoardBtn.className = "admin-btn";
+    testBoardBtn.textContent = "Test Board";
+    testBoardBtn.addEventListener("click", () => {
+      localStorage.setItem("ts-active-project-id", projectId);
+      window.location.href = `test-board.html?projectId=${encodeURIComponent(projectId)}`;
+    });
+
+    row.appendChild(btn);
+    row.appendChild(testBoardBtn);
+    li.appendChild(row);
     list.appendChild(li);
   });
 }

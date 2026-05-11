@@ -151,6 +151,15 @@ function renderProjects() {
       window.location.href = `board.html?projectId=${encodeURIComponent(project.id)}`;
     });
 
+    const testBoardBtn = document.createElement("button");
+    testBoardBtn.type = "button";
+    testBoardBtn.className = "export-btn";
+    testBoardBtn.textContent = "Test Board";
+    testBoardBtn.addEventListener("click", () => {
+      localStorage.setItem("ts-active-project-id", project.id);
+      window.location.href = `test-board.html?projectId=${encodeURIComponent(project.id)}`;
+    });
+
     const adminBtn = document.createElement("button");
     adminBtn.type = "button";
     adminBtn.className = "admin-btn";
@@ -168,6 +177,7 @@ function renderProjects() {
     });
 
     row.appendChild(btn);
+    row.appendChild(testBoardBtn);
     row.appendChild(adminBtn);
     row.appendChild(exportBtn);
     li.appendChild(row);
