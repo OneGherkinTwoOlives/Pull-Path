@@ -57,6 +57,9 @@ function disciplineNameForLane(project, laneId) {
 function buildTaktCsv(project, boardState) {
   const notes = Array.isArray(boardState?.notes) ? boardState.notes : [];
   const links = Array.isArray(boardState?.links) ? boardState.links : [];
+  const taskDurationUnit = String(boardState?.taskDurationUnit || "").toLowerCase() === "day" ? "day" : "week";
+  const taskDurationMs = taskDurationUnit === "day" ? DAY_MS : WEEK_MS;
+  const durationHeader = taskDurationUnit === "day" ? "Duration (days)" : "Duration (weeks)";
 
   const ordered = [...notes].sort((a, b) => {
     const dx = (a.x || 0) - (b.x || 0);
@@ -80,8 +83,8 @@ function buildTaktCsv(project, boardState) {
   const rows = ordered.map((note) => {
     const startProgress = Math.max(0, Math.min(1, (Number(note.x) || 0) / maxX));
     const startMs = visibleStartMs + startProgress * rangeMs;
-    const durationWeeks = Math.max(1, Number(note.durationWeeks) || 1);
-    const endMs = startMs + durationWeeks * WEEK_MS;
+    const durationUnits = Math.max(1, Number(note.durationWeeks) || 1);
+    const endMs = startMs + durationUnits * taskDurationMs;
 
     const predecessors = links
       .filter((link) => (link.type || "FS") === "FS" && link.b === note.id)
@@ -96,12 +99,12 @@ function buildTaktCsv(project, boardState) {
       disciplineNameForLane(project, note.lane),
       formatUtcDate(startMs),
       formatUtcDate(endMs),
-      durationWeeks,
+      durationUnits,
       predecessors,
     ];
   });
 
-  const header = ["Task #", "Task Name", "Discipline", "Start Date", "End Date", "Duration (weeks)", "Predecessors"];
+  const header = ["Task #", "Task Name", "Discipline", "Start Date", "End Date", durationHeader, "Predecessors"];
   const lines = [header, ...rows].map((row) => row.map(csvEscape).join(","));
   return lines.join("\n");
 }

@@ -73,6 +73,15 @@ let importedCsvFileName = "";
 const customDisciplines = new Map();
 let pendingInviteEmails = [];
 
+function normalizeTaskDurationUnit(value) {
+  return String(value || "").toLowerCase() === "day" ? "day" : "week";
+}
+
+function getTaskDurationUnit() {
+  const selected = document.querySelector('input[name="task-duration-unit"]:checked');
+  return normalizeTaskDurationUnit(selected?.value);
+}
+
 function inviteStatusElement() {
   return document.getElementById("invite-status");
 }
@@ -680,7 +689,7 @@ function parseTaskCsv(csvText) {
   return tasks;
 }
 
-function buildImportedBoardState(tasks, projectStartMs, finishDateMs, stageDurationWeeks) {
+function buildImportedBoardState(tasks, projectStartMs, finishDateMs, stageDurationWeeks, taskDurationUnit = "week") {
   const paddingWeeks = 2;
   const visibleStartMs = projectStartMs - paddingWeeks * WEEK_MS;
   const visibleEndMs = finishDateMs + paddingWeeks * WEEK_MS;
@@ -705,7 +714,7 @@ function buildImportedBoardState(tasks, projectStartMs, finishDateMs, stageDurat
       x,
       y: laneBaseTop(laneIdx) + 36 + (index % 3) * 16,
       text: task.name,
-      durationWeeks: task.durationWeeks,
+      durationWeeks: taskDurationUnit === "day" ? Math.max(1, Math.round(task.durationWeeks * 7)) : task.durationWeeks,
       lane: laneSlug,
     });
     noteIdByTaskNumber.set(index + 1, noteId);
@@ -734,6 +743,7 @@ function buildImportedBoardState(tasks, projectStartMs, finishDateMs, stageDurat
   return {
     stageDurationWeeks,
     finishDateMs,
+    taskDurationUnit: normalizeTaskDurationUnit(taskDurationUnit),
     zoomX: 1,
     zoomY: 1,
     snapToWeek: true,
@@ -950,6 +960,7 @@ function validatePage1() {
 function validatePage2() {
   const startDate = document.getElementById("project-start-date").value;
   const durationWeeks = Number(document.getElementById("project-duration").value);
+  const taskDurationUnit = getTaskDurationUnit();
 
   if (!startDate) {
     alert("Start date is required.");
@@ -958,6 +969,11 @@ function validatePage2() {
 
   if (!durationWeeks || durationWeeks < 1) {
     alert("Duration must be at least 1 week.");
+    return false;
+  }
+
+  if (!["day", "week"].includes(taskDurationUnit)) {
+    alert("Select a task duration unit.");
     return false;
   }
 
@@ -1097,6 +1113,7 @@ async function submitForm(event) {
   const name = document.getElementById("project-name-input").value.trim();
   const startDate = document.getElementById("project-start-date").value;
   const durationWeeks = Number(document.getElementById("project-duration").value);
+  const taskDurationUnit = getTaskDurationUnit();
   const disciplines = selectedDisciplines();
   const deliverables = getDeliverablesData();
   const projectAdminEmail = isProjectAdmin ? authSession.email : getProjectAdminEmail();
@@ -1121,6 +1138,7 @@ async function submitForm(event) {
     existing.name = name;
     existing.startDate = startDate;
     existing.durationWeeks = durationWeeks;
+    existing.taskDurationUnit = taskDurationUnit;
     existing.disciplines = disciplines;
     existing.team = buildTeam();
     existing.deliverables = deliverables;
@@ -1139,9 +1157,25 @@ async function submitForm(event) {
     boardState.projectName = name;
     boardState.stageDurationWeeks = durationWeeks;
     boardState.finishDateMs = finishDateMs;
+    const previousDurationUnit = normalizeTaskDurationUnit(boardState.taskDurationUnit);
+    if (previousDurationUnit !== taskDurationUnit && Array.isArray(boardState.notes)) {
+      const factor = previousDurationUnit === "week" && taskDurationUnit === "day" ? 7 : (1 / 7);
+      boardState.notes = boardState.notes.map((note) => {
+        const noteKind = note.kind || "task";
+        if (["prerequisite", "deliverable"].includes(noteKind)) {
+          return note;
+        }
+        const currentDuration = Math.max(1, Number(note.durationWeeks) || 1);
+        return {
+          ...note,
+          durationWeeks: Math.max(1, Math.round(currentDuration * factor)),
+        };
+      });
+    }
+    boardState.taskDurationUnit = taskDurationUnit;
     boardState.deliverables = deliverables;
     if (importedTasks.length) {
-      const imported = buildImportedBoardState(importedTasks, startMs, finishDateMs, durationWeeks);
+      const imported = buildImportedBoardState(importedTasks, startMs, finishDateMs, durationWeeks, taskDurationUnit);
       boardState.notes = imported.notes;
       boardState.links = imported.links;
       boardState.zoomX = imported.zoomX;
@@ -1160,6 +1194,7 @@ async function submitForm(event) {
       name,
       startDate,
       durationWeeks,
+      taskDurationUnit,
       disciplines,
       team: buildTeam(),
       projectAdmins: [projectAdminEmail],
@@ -1174,10 +1209,11 @@ async function submitForm(event) {
   await saveProjects(projects);
 
     const imported = importedTasks.length
-      ? buildImportedBoardState(importedTasks, startMs, finishDateMs, durationWeeks)
+      ? buildImportedBoardState(importedTasks, startMs, finishDateMs, durationWeeks, taskDurationUnit)
       : {
           stageDurationWeeks: durationWeeks,
           finishDateMs,
+          taskDurationUnit,
           zoomX: 1,
           zoomY: 1,
           snapToWeek: true,
@@ -1189,6 +1225,7 @@ async function submitForm(event) {
       projectName: project.name,
       stageDurationWeeks: imported.stageDurationWeeks,
       finishDateMs: imported.finishDateMs,
+      taskDurationUnit: imported.taskDurationUnit,
       zoomX: imported.zoomX,
       zoomY: imported.zoomY,
       snapToWeek: imported.snapToWeek,
@@ -1228,6 +1265,14 @@ async function loadProjectForEdit(projectId) {
   document.getElementById("project-name-input").value = project.name;
   document.getElementById("project-start-date").value = project.startDate;
   document.getElementById("project-duration").value = project.durationWeeks;
+  const savedBoardState = window.TSData?.fetchBoardState
+    ? await window.TSData.fetchBoardState(projectId)
+    : loadBoardState(projectId);
+  const loadedTaskDurationUnit = normalizeTaskDurationUnit(savedBoardState?.taskDurationUnit || project.taskDurationUnit);
+  const durationRadio = document.querySelector(`input[name="task-duration-unit"][value="${loadedTaskDurationUnit}"]`);
+  if (durationRadio) {
+    durationRadio.checked = true;
+  }
   setProjectAdminEmail(normalizeStoredProjectAdmins(project)[0] || project.createdByEmail || authSession.email);
 
   (Array.isArray(project.disciplines) ? project.disciplines : []).forEach((discipline) => {

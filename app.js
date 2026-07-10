@@ -155,6 +155,7 @@ const state = {
   linkPreviewCursor: null,
   selectedNoteId: null,
   stageDurationWeeks: 26,
+  taskDurationUnit: "week",
   finishDateMs: 0,
   zoomX: 1,
   zoomY: 1,
@@ -821,6 +822,7 @@ function serializeState() {
     notes: notesArray,
     links: state.links,
     stageDurationWeeks: state.stageDurationWeeks,
+    taskDurationUnit: state.taskDurationUnit,
     finishDateMs: state.finishDateMs,
     deliverables: state.deliverables || currentProject?.deliverables || null,
   };
@@ -911,6 +913,7 @@ function applyLoadedState(loaded, loadedView = null) {
   setProjectName(loaded.projectName);
 
   state.stageDurationWeeks = loaded.stageDurationWeeks || 26;
+  state.taskDurationUnit = String(loaded.taskDurationUnit || "").toLowerCase() === "day" ? "day" : "week";
   state.finishDateMs = loaded.finishDateMs || Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate());
   // Backward compatibility for older saves that used a single zoom value and stored view in shared state.
   const fallbackZoom = loaded.zoom || 1;
@@ -1430,6 +1433,26 @@ function weeksToPixels(weeks) {
   return (width * weeks) / visibleRangeWeeks();
 }
 
+function taskDurationUnit() {
+  return state.taskDurationUnit === "day" ? "day" : "week";
+}
+
+function taskDurationUnitsPerWeek() {
+  return taskDurationUnit() === "day" ? 7 : 1;
+}
+
+function taskDurationShortLabel() {
+  return taskDurationUnit() === "day" ? "day" : "wk";
+}
+
+function durationUnitsToWeeks(units) {
+  return Number(units || 0) / taskDurationUnitsPerWeek();
+}
+
+function maxTaskDurationUnits() {
+  return Math.max(MIN_DURATION_WEEKS, Math.floor(state.stageDurationWeeks * taskDurationUnitsPerWeek()));
+}
+
 function timestampToX(timestamp) {
   const { width } = boardSize();
   const rangeMs = visibleEndMs() - visibleStartMs();
@@ -1458,7 +1481,7 @@ function clampNoteDurationToStage(note) {
     note.durationWeeks = 0;
     return false;
   }
-  const maxDurationWeeks = Math.max(MIN_DURATION_WEEKS, Math.floor(state.stageDurationWeeks));
+  const maxDurationWeeks = maxTaskDurationUnits();
   if (note.durationWeeks > maxDurationWeeks) {
     note.durationWeeks = maxDurationWeeks;
     return true;
@@ -1467,7 +1490,10 @@ function clampNoteDurationToStage(note) {
 }
 
 function noteDurationWeeks(note) {
-  return ["prerequisite", "deliverable"].includes(note.kind || "task") ? 0 : (note.durationWeeks || MIN_DURATION_WEEKS);
+  if (["prerequisite", "deliverable"].includes(note.kind || "task")) {
+    return 0;
+  }
+  return durationUnitsToWeeks(note.durationWeeks || MIN_DURATION_WEEKS);
 }
 
 function stageStartBounds(noteId, noteDurationPx) {
@@ -2008,10 +2034,17 @@ function ensureDurationValueEl(noteEl) {
     weeksEl = document.createElement("span");
     weeksEl.className = "duration-weeks";
     durationValue.appendChild(weeksEl);
-    durationValue.append(" wk");
   }
 
-  return weeksEl;
+  let unitEl = durationValue.querySelector(".duration-unit");
+  if (!unitEl) {
+    durationValue.append(" ");
+    unitEl = document.createElement("span");
+    unitEl.className = "duration-unit";
+    durationValue.appendChild(unitEl);
+  }
+
+  return { valueEl: weeksEl, unitEl };
 }
 
 function noteDisplayName(note) {
@@ -2184,7 +2217,7 @@ function renderScheduleTable() {
       DISCIPLINE_SHORT_NAMES[note.lane] || getLane(note.lane).name,
       isPrerequisite ? "Before start" : formatUtcDate(startMs, "numeric"),
       isPrerequisite ? "-" : formatUtcDate(endMs, "numeric"),
-      isPrerequisite ? "Prerequisite" : `${note.durationWeeks} wk`,
+      isPrerequisite ? "Prerequisite" : `${note.durationWeeks} ${taskDurationShortLabel()}`,
     ];
 
     cells.forEach((value) => {
@@ -2582,7 +2615,7 @@ function updateNoteElement(note) {
     collapsedTextEl.textContent = noteDisplayName(note);
   }
   if (collapsedDurationEl) {
-    collapsedDurationEl.textContent = isPrerequisite ? "PRE" : isDeliverable ? "" : `${note.durationWeeks} wk`;
+    collapsedDurationEl.textContent = isPrerequisite ? "PRE" : isDeliverable ? "" : `${note.durationWeeks} ${taskDurationShortLabel()}`;
   }
 
   const scale = noteScale();
@@ -2604,7 +2637,7 @@ function updateNoteElement(note) {
   }
 
   const { dateEl } = ensureNoteHeaderMeta(note.el);
-  const weeksEl = ensureDurationValueEl(note.el);
+  const durationEls = ensureDurationValueEl(note.el);
 
   note.el.style.transformOrigin = "top left";
   if (isPrerequisite) {
@@ -2625,8 +2658,11 @@ function updateNoteElement(note) {
       dateEl.textContent = xToDateLabel(noteStartX(note));
     }
   }
-  if (weeksEl) {
-    weeksEl.textContent = String(note.durationWeeks);
+  if (durationEls?.valueEl) {
+    durationEls.valueEl.textContent = String(note.durationWeeks);
+  }
+  if (durationEls?.unitEl) {
+    durationEls.unitEl.textContent = taskDurationShortLabel();
   }
 
   const lane = getLane(note.lane);
@@ -2965,7 +3001,7 @@ function acceptSuggestedNote(noteId) {
   const sourceNoteId = note.requestSourceNoteId;
   note.requestSourceNoteId = null;
   note.requestDeclines = normalizeDeclineFeedback(note.requestDeclines);
-  note.durationWeeks = clamp(Number(note.durationWeeks) || 1, MIN_DURATION_WEEKS, MAX_DURATION_WEEKS);
+  note.durationWeeks = clamp(Number(note.durationWeeks) || 1, MIN_DURATION_WEEKS, maxTaskDurationUnits());
 
   if (sourceNoteId && state.notes.has(sourceNoteId)) {
     const exists = state.links.some((link) => relationshipType(link) === "FS" && link.a === note.id && link.b === sourceNoteId);
@@ -3117,7 +3153,7 @@ function createNote({
   const decreaseBtn = node.querySelector(".duration-down");
 
   const noteId = id || uid("note");
-  const maxDurationWeeks = Math.max(MIN_DURATION_WEEKS, Math.min(MAX_DURATION_WEEKS, Math.floor(state.stageDurationWeeks)));
+  const maxDurationWeeks = maxTaskDurationUnits();
   const noteKind = kind || "task";
   const baseNoteSize = noteKind === "deliverable" ? DELIVERABLE_NOTE_SIZE_PX : 210;
   const note = {
@@ -3239,7 +3275,7 @@ function createNote({
     if (note.kind === "prerequisite") {
       return;
     }
-    const maxDurationWeeks = Math.max(MIN_DURATION_WEEKS, Math.min(MAX_DURATION_WEEKS, Math.floor(state.stageDurationWeeks)));
+    const maxDurationWeeks = maxTaskDurationUnits();
     note.durationWeeks = clamp(note.durationWeeks + 1, MIN_DURATION_WEEKS, maxDurationWeeks);
     updateNoteElement(note);
     syncStartLinkedNotes(noteId, noteStartX(note));
@@ -3258,7 +3294,7 @@ function createNote({
     if (note.kind === "prerequisite") {
       return;
     }
-    note.durationWeeks = clamp(note.durationWeeks - 1, MIN_DURATION_WEEKS, MAX_DURATION_WEEKS);
+    note.durationWeeks = clamp(note.durationWeeks - 1, MIN_DURATION_WEEKS, maxTaskDurationUnits());
     updateNoteElement(note);
     syncStartLinkedNotes(noteId, noteStartX(note));
     enforceAllFinishStartLinks();
@@ -3961,6 +3997,9 @@ function applyRemoteState(remoteState) {
   }
   if (remoteState.stageDurationWeeks !== undefined) {
     state.stageDurationWeeks = remoteState.stageDurationWeeks;
+  }
+  if (remoteState.taskDurationUnit !== undefined) {
+    state.taskDurationUnit = String(remoteState.taskDurationUnit).toLowerCase() === "day" ? "day" : "week";
   }
   if (remoteState.finishDateMs !== undefined) {
     state.finishDateMs = remoteState.finishDateMs;
