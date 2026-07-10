@@ -1330,6 +1330,20 @@ function mondayOnOrBefore(ms) {
   return startOfUtcWeekMonday(ms);
 }
 
+function startOfUtcDay(ms) {
+  const date = new Date(ms);
+  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+}
+
+function dayOnOrAfter(ms) {
+  const day = startOfUtcDay(ms);
+  return day < ms ? day + DAY_MS : day;
+}
+
+function dayOnOrBefore(ms) {
+  return startOfUtcDay(ms);
+}
+
 function snapStartToMondayWithinBounds(startX, minStart, maxStart) {
   if (!state.snapToWeek) {
     return clamp(startX, minStart, maxStart);
@@ -1337,6 +1351,18 @@ function snapStartToMondayWithinBounds(startX, minStart, maxStart) {
 
   const minMs = xToTimestamp(minStart);
   const maxMs = xToTimestamp(maxStart);
+
+  if (taskDurationUnit() === "day") {
+    const minDayMs = dayOnOrAfter(minMs);
+    const maxDayMs = dayOnOrBefore(maxMs);
+    if (minDayMs > maxDayMs) {
+      return clamp(startX, minStart, maxStart);
+    }
+    let snappedMs = startOfUtcDay(xToTimestamp(startX));
+    snappedMs = clamp(snappedMs, minDayMs, maxDayMs);
+    return clamp(timestampToX(snappedMs), minStart, maxStart);
+  }
+
   const minMondayMs = mondayOnOrAfter(minMs);
   const maxMondayMs = mondayOnOrBefore(maxMs);
 
@@ -1365,7 +1391,9 @@ function xToTimestamp(x) {
 }
 
 function xToDateLabel(x) {
-  return formatUtcDate(startOfUtcWeekMonday(xToTimestamp(x)), "numeric");
+  const ts = xToTimestamp(x);
+  const boundary = taskDurationUnit() === "day" ? startOfUtcDay(ts) : startOfUtcWeekMonday(ts);
+  return formatUtcDate(boundary, "numeric");
 }
 
 function planningWeekIndexFromStartX(startX) {
