@@ -80,6 +80,7 @@
               </div>
             </label>
             <div class="settings-actions-row">
+              <button id="replay-tour-btn" class="settings-action-btn" type="button">Replay Tour</button>
               <button id="clear-links-btn" class="settings-action-btn" type="button">Clear Links</button>
               <button id="project-admin-page-btn" class="settings-action-btn" type="button">Project Admin Page</button>
             </div>
@@ -122,6 +123,7 @@
           <div id="timeline-grid" class="timeline-grid" aria-hidden="true"></div>
           <div id="stage-start-line" class="stage-line stage-line-start"></div>
           <div id="stage-finish-line" class="stage-line stage-line-finish"></div>
+          <div id="today-line" class="today-line" aria-hidden="true" hidden></div>
           <div class="timeline-layer" aria-hidden="true">
             <div class="timeline-axis"></div>
             <div id="timeline-ticks" class="timeline-ticks"></div>
@@ -227,6 +229,20 @@
           </div>
         </form>
       </div>
+    </div>
+
+    <div id="board-tour-overlay" class="board-tour-overlay" hidden>
+      <div id="board-tour-spotlight" class="board-tour-spotlight" aria-hidden="true"></div>
+      <section id="board-tour-card" class="board-tour-card" role="dialog" aria-modal="true" aria-labelledby="board-tour-title">
+        <p id="board-tour-step" class="board-tour-step">Step 1 of 6</p>
+        <h2 id="board-tour-title">Welcome to Pull Path</h2>
+        <p id="board-tour-text" class="board-tour-text"></p>
+        <div class="board-tour-actions">
+          <button id="board-tour-skip" class="board-tour-btn board-tour-btn-ghost" type="button">Skip tour</button>
+          <button id="board-tour-back" class="board-tour-btn board-tour-btn-ghost" type="button">Back</button>
+          <button id="board-tour-next" class="board-tour-btn board-tour-btn-primary" type="button">Next</button>
+        </div>
+      </section>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

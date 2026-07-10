@@ -11,6 +11,7 @@ const addNoteBtn = document.getElementById("add-note-btn");
 const addNoteMenu = document.getElementById("add-note-menu");
 const settingsBtn = document.getElementById("settings-btn");
 const settingsMenu = document.getElementById("settings-menu");
+const replayTourBtn = document.getElementById("replay-tour-btn");
 const prerequisiteBtn = document.getElementById("prerequisite-btn");
 const prerequisiteMenu = document.getElementById("prerequisite-menu");
 const clearLinksBtn = document.getElementById("clear-links-btn");
@@ -40,6 +41,7 @@ const projectNameEl = document.getElementById("project-name");
 const statusEl = document.getElementById("status");
 const stageStartLine = document.getElementById("stage-start-line");
 const stageFinishLine = document.getElementById("stage-finish-line");
+const todayLine = document.getElementById("today-line");
 const swimLanesLayer = document.getElementById("swim-lanes-layer");
 const suggestionModal = document.getElementById("suggestion-modal");
 const suggestionForm = document.getElementById("suggestion-form");
@@ -58,6 +60,15 @@ const declineForm = document.getElementById("decline-form");
 const declineReasonInput = document.getElementById("decline-reason-input");
 const declineModalCloseBtn = document.getElementById("decline-modal-close");
 const declineCancelBtn = document.getElementById("decline-cancel-btn");
+const boardTourOverlay = document.getElementById("board-tour-overlay");
+const boardTourSpotlight = document.getElementById("board-tour-spotlight");
+const boardTourCard = document.getElementById("board-tour-card");
+const boardTourStepEl = document.getElementById("board-tour-step");
+const boardTourTitleEl = document.getElementById("board-tour-title");
+const boardTourTextEl = document.getElementById("board-tour-text");
+const boardTourBackBtn = document.getElementById("board-tour-back");
+const boardTourNextBtn = document.getElementById("board-tour-next");
+const boardTourSkipBtn = document.getElementById("board-tour-skip");
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
@@ -71,6 +82,7 @@ const BASE_WEEK_WIDTH_PX = 160;
 const DELIVERABLE_NOTE_SIZE_PX = 176;
 const DELIVERABLE_GUIDANCE_LINE_1 = "Start planning from the end, Pull Planing strats from the finish and work backwards.";
 const DELIVERABLE_GUIDANCE_LINE_2 = "Use the \"<>\" button to request items you require from your team.";
+const BOARD_TOUR_VERSION = "v1";
 
 const authSession = window.TSAuth.requireAuth(["super-admin", "project-admin", "consultant"]);
 if (!authSession) {
@@ -160,6 +172,8 @@ const state = {
 let dragState = null;
 let pendingSuggestionSourceNoteId = null;
 let pendingDeclineNoteId = null;
+let boardTourSteps = [];
+let boardTourIndex = 0;
 
 function setStatus(message) {
   statusEl.textContent = message;
@@ -404,6 +418,182 @@ function applyRoleUi() {
   if (projectAdminPageBtn) {
     projectAdminPageBtn.style.display = "none";
   }
+}
+
+function boardTourStorageKey() {
+  return `board-tour-${BOARD_TOUR_VERSION}-${getProjectIdFromLocation()}-${currentUserKey}`;
+}
+
+function hasSeenBoardTour() {
+  try {
+    return localStorage.getItem(boardTourStorageKey()) === "seen";
+  } catch (err) {
+    return false;
+  }
+}
+
+function markBoardTourSeen() {
+  try {
+    localStorage.setItem(boardTourStorageKey(), "seen");
+  } catch (err) {
+    console.warn("Unable to persist board tour preference", err);
+  }
+}
+
+function isTourTargetVisible(element) {
+  if (!element || element.hidden) {
+    return false;
+  }
+
+  const styles = window.getComputedStyle(element);
+  if (styles.display === "none" || styles.visibility === "hidden") {
+    return false;
+  }
+
+  const rect = element.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0;
+}
+
+function resolveBoardTourSteps() {
+  const candidates = [
+    {
+      id: "project-name",
+      title: "Project Header",
+      text: "This title shows your current project. Project admins can rename it directly from the board.",
+    },
+    {
+      id: "add-note-btn",
+      title: "Add Notes",
+      text: "Use Add Note to create new tasks in a discipline lane. Notes are the building blocks of your schedule.",
+    },
+    {
+      id: "prerequisite-btn",
+      title: "Prerequisite Tasks",
+      text: "Use Prerequisites for work that must happen before the stage starts.",
+    },
+    {
+      id: "settings-btn",
+      title: "Settings",
+      text: "Open Settings to adjust snapping, zoom, lane collapse, and other board display options.",
+    },
+    {
+      id: "magnetic-end-btn",
+      title: "Magnetic-End",
+      text: "Magnetic-End condenses the plan by pulling tasks to the latest dependency-safe dates toward the finish.",
+    },
+    {
+      id: "schedule-toggle-btn",
+      title: "Takt Schedule Table",
+      text: "Show Takt Schedule opens a structured table where you can review dates and predecessors.",
+    },
+    {
+      id: "board-viewport",
+      title: "Board Workspace",
+      text: "Drag tasks in this workspace and use each note's link button to define predecessor and successor relationships.",
+    },
+    {
+      id: "save-btn",
+      title: "Save Progress",
+      text: "Save writes the current board state so your team sees the latest schedule.",
+    },
+  ];
+
+  const visibleSteps = candidates
+    .map((item) => ({ ...item, element: document.getElementById(item.id) }))
+    .filter((item) => isTourTargetVisible(item.element));
+
+  return visibleSteps.slice(0, 6);
+}
+
+function placeBoardTourCard(targetRect) {
+  if (!boardTourCard) {
+    return;
+  }
+
+  const margin = 12;
+  const cardWidth = Math.min(360, window.innerWidth - margin * 2);
+  const cardHeight = boardTourCard.offsetHeight || 210;
+
+  let left = targetRect.left;
+  left = Math.min(left, window.innerWidth - cardWidth - margin);
+  left = Math.max(margin, left);
+
+  let top = targetRect.bottom + margin;
+  if (top + cardHeight > window.innerHeight - margin) {
+    top = targetRect.top - cardHeight - margin;
+  }
+  if (top < margin) {
+    top = margin;
+  }
+
+  boardTourCard.style.left = `${Math.round(left)}px`;
+  boardTourCard.style.top = `${Math.round(top)}px`;
+}
+
+function renderBoardTourStep() {
+  if (!boardTourSteps.length || !boardTourSpotlight || !boardTourCard) {
+    return;
+  }
+
+  const step = boardTourSteps[boardTourIndex];
+  const target = step?.element;
+  if (!target) {
+    return;
+  }
+
+  target.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+  const rect = target.getBoundingClientRect();
+  const pad = 8;
+
+  boardTourSpotlight.style.left = `${Math.max(6, rect.left - pad)}px`;
+  boardTourSpotlight.style.top = `${Math.max(6, rect.top - pad)}px`;
+  boardTourSpotlight.style.width = `${Math.min(window.innerWidth - 12, rect.width + pad * 2)}px`;
+  boardTourSpotlight.style.height = `${Math.min(window.innerHeight - 12, rect.height + pad * 2)}px`;
+
+  boardTourStepEl.textContent = `Step ${boardTourIndex + 1} of ${boardTourSteps.length}`;
+  boardTourTitleEl.textContent = step.title;
+  boardTourTextEl.textContent = step.text;
+  boardTourBackBtn.disabled = boardTourIndex === 0;
+  boardTourNextBtn.textContent = boardTourIndex === boardTourSteps.length - 1 ? "Finish" : "Next";
+
+  placeBoardTourCard(rect);
+}
+
+function closeBoardTour(markSeen = true) {
+  if (!boardTourOverlay) {
+    return;
+  }
+  boardTourOverlay.hidden = true;
+  if (markSeen) {
+    markBoardTourSeen();
+  }
+}
+
+function openBoardTour() {
+  if (!boardTourOverlay || !boardTourSpotlight || !boardTourCard) {
+    return;
+  }
+
+  boardTourSteps = resolveBoardTourSteps();
+  if (boardTourSteps.length < 3) {
+    return;
+  }
+
+  boardTourIndex = 0;
+  boardTourOverlay.hidden = false;
+  renderBoardTourStep();
+}
+
+function maybeStartBoardTour() {
+  if (hasSeenBoardTour()) {
+    return;
+  }
+
+  setTimeout(() => {
+    if (!hasSeenBoardTour()) {
+      openBoardTour();
+    }
+  }, 450);
 }
 
 if (!isProjectAdmin && projectAdminPageBtn) {
@@ -1313,6 +1503,32 @@ function updateStageLines() {
   }
 }
 
+function utcStartOfTodayMs() {
+  const now = new Date();
+  return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+}
+
+function updateTodayLine() {
+  if (!todayLine) {
+    return;
+  }
+
+  const todayMs = utcStartOfTodayMs();
+  const { width } = boardSize();
+  const minVisibleMs = visibleStartMs();
+  const maxVisibleMs = visibleEndMs();
+  const isVisible = width > 0 && todayMs >= minVisibleMs && todayMs <= maxVisibleMs;
+
+  if (!isVisible) {
+    todayLine.hidden = true;
+    return;
+  }
+
+  todayLine.hidden = false;
+  todayLine.style.left = `${timestampToX(todayMs)}px`;
+  todayLine.style.right = "auto";
+}
+
 function dateValueToUtcMs(dateValue) {
   if (!dateValue) {
     return null;
@@ -1738,6 +1954,7 @@ function createTickMarks() {
   }
 
   updateStageLines();
+  updateTodayLine();
 }
 
 function ensureNoteHeaderMeta(noteEl) {
@@ -3436,6 +3653,13 @@ if (projectAdminPageBtn) {
   });
 }
 
+if (replayTourBtn) {
+  replayTourBtn.addEventListener("click", () => {
+    closeSettingsMenu();
+    openBoardTour();
+  });
+}
+
 saveBtn.addEventListener("click", () => {
   saveState();
 });
@@ -3467,6 +3691,39 @@ if (magneticEndBtn) {
     applyMagneticEnd();
   });
 }
+
+if (boardTourBackBtn) {
+  boardTourBackBtn.addEventListener("click", () => {
+    if (boardTourIndex === 0) {
+      return;
+    }
+    boardTourIndex -= 1;
+    renderBoardTourStep();
+  });
+}
+
+if (boardTourNextBtn) {
+  boardTourNextBtn.addEventListener("click", () => {
+    if (boardTourIndex >= boardTourSteps.length - 1) {
+      closeBoardTour(true);
+      return;
+    }
+    boardTourIndex += 1;
+    renderBoardTourStep();
+  });
+}
+
+if (boardTourSkipBtn) {
+  boardTourSkipBtn.addEventListener("click", () => {
+    closeBoardTour(true);
+  });
+}
+
+window.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && boardTourOverlay && !boardTourOverlay.hidden) {
+    closeBoardTour(true);
+  }
+});
 
 if (projectNameEl) {
   projectNameEl.addEventListener("blur", () => {
@@ -3592,6 +3849,9 @@ window.addEventListener("resize", () => {
   const noteStartTimestamps = snapshotNoteStartTimestamps();
   updateBoardWidth();
   refreshLayout({ noteStartTimestamps });
+  if (boardTourOverlay && !boardTourOverlay.hidden) {
+    renderBoardTourStep();
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -3758,6 +4018,7 @@ async function initializeBoard() {
     );
     setStatus("Board loaded from save.");
     setupRealtimeSync();
+    maybeStartBoardTour();
     return;
   }
 
@@ -3791,6 +4052,7 @@ async function initializeBoard() {
   );
   renderLinks();
   setupRealtimeSync();
+  maybeStartBoardTour();
   saveState();
 }
 

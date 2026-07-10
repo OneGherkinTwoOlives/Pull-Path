@@ -419,6 +419,78 @@ h1[contenteditable="true"]:focus {
   box-shadow: 0 5px 12px rgba(79, 70, 229, 0.34);
 }
 
+.board-tour-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(7, 12, 16, 0.62);
+}
+
+.board-tour-spotlight {
+  position: fixed;
+  border-radius: 12px;
+  border: 2px solid #ffb000;
+  box-shadow: 0 0 0 9999px rgba(7, 12, 16, 0.58), 0 0 0 4px rgba(255, 176, 0, 0.2);
+  pointer-events: none;
+  transition: top 180ms ease, left 180ms ease, width 180ms ease, height 180ms ease;
+}
+
+.board-tour-card {
+  position: fixed;
+  width: min(360px, calc(100vw - 24px));
+  background: #fff;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28);
+  color: #1f2937;
+}
+
+.board-tour-step {
+  margin: 0;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748b;
+}
+
+.board-tour-card h2 {
+  margin: 6px 0 8px;
+  font-size: 1.1rem;
+}
+
+.board-tour-text {
+  margin: 0;
+  color: #334155;
+  line-height: 1.42;
+}
+
+.board-tour-actions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.board-tour-btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.44rem 0.9rem;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.board-tour-btn-ghost {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.board-tour-btn-primary {
+  background: #ff6b35;
+  color: #fff;
+}
+
 .prerequisite-menu {
   background: rgba(17, 17, 17, 0.97);
   border: 1px solid rgba(255, 255, 255, 0.14);
@@ -742,6 +814,37 @@ main {
 .stage-line-finish {
   right: 0;
   background: rgb(156, 6, 3);
+}
+
+.today-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  z-index: 4;
+  pointer-events: none;
+  background: #f97316;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+.today-line::after {
+  content: "Today";
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(249, 115, 22, 0.92);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.today-line[hidden] {
+  display: none !important;
 }
 
 .timeline-ticks {
