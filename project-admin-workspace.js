@@ -29,17 +29,6 @@ function renderProjectRow(assignment, options = {}) {
 
   row.appendChild(openBtn);
 
-  const testBoardBtn = document.createElement("button");
-  testBoardBtn.type = "button";
-  testBoardBtn.className = "export-btn";
-  testBoardBtn.textContent = "Test Board";
-  testBoardBtn.addEventListener("click", () => {
-    localStorage.setItem("ts-active-project-id", assignment.projectId);
-    window.location.href = `test-board.html?projectId=${encodeURIComponent(assignment.projectId)}`;
-  });
-
-  row.appendChild(testBoardBtn);
-
   if (showManage) {
     const manageBtn = document.createElement("button");
     manageBtn.type = "button";
