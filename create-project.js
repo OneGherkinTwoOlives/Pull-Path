@@ -107,6 +107,7 @@ let importedTasks = [];
 let importedCsvFileName = "";
 const customDisciplines = new Map();
 let pendingInviteEmails = [];
+let isInPersonOnlyProject = false;
 
 function normalizeTaskDurationUnit(value) {
   return String(value || "").toLowerCase() === "day" ? "day" : "week";
@@ -184,7 +185,47 @@ function updateInviteAllButtonState() {
   if (!btn) {
     return;
   }
-  btn.disabled = teamEmailsFromRows().length === 0;
+  btn.disabled = isInPersonOnlyProject || teamEmailsFromRows().length === 0;
+}
+
+function updateInPersonOnlyUi() {
+  const btn = document.getElementById("in-person-only-btn");
+  const panel = document.getElementById("team-email-panel");
+  const textarea = document.getElementById("team-email-input");
+  const inviteStatus = document.getElementById("invite-status");
+  const teamRows = document.getElementById("team-rows");
+
+  if (btn) {
+    btn.setAttribute("aria-pressed", isInPersonOnlyProject ? "true" : "false");
+    btn.textContent = isInPersonOnlyProject ? "In-Person Only" : "In-Person Only";
+  }
+
+  if (panel) {
+    panel.classList.toggle("team-email-panel-hidden", isInPersonOnlyProject);
+  }
+
+  if (textarea) {
+    textarea.disabled = isInPersonOnlyProject;
+  }
+
+  if (inviteStatus && isInPersonOnlyProject) {
+    inviteStatus.textContent = "No team email assignments needed for in-person only projects.";
+    inviteStatus.classList.remove("invite-status-success", "invite-status-error");
+  }
+
+  if (teamRows && isInPersonOnlyProject) {
+    teamRows.innerHTML = "";
+  }
+
+  updateInviteAllButtonState();
+}
+
+function toggleInPersonOnly() {
+  isInPersonOnlyProject = !isInPersonOnlyProject;
+  if (isInPersonOnlyProject) {
+    pendingInviteEmails = [];
+  }
+  updateInPersonOnlyUi();
 }
 
 function openInviteModal(emails) {
@@ -363,6 +404,10 @@ function normalizeProjectType(value) {
   };
   const mapped = aliasMap[normalized] || normalized;
   return Object.prototype.hasOwnProperty.call(PROJECT_TYPE_DISCIPLINES, mapped) ? mapped : "";
+}
+
+function normalizeTeamMode(value) {
+  return String(value || "").toLowerCase() === "in-person" ? "in-person" : "assigned";
 }
 
 function getSelectedProjectType() {
@@ -584,6 +629,10 @@ function renderDisciplineOptions(selectedValues = selectedDisciplines()) {
 }
 
 function parseAndRenderTeamEmails(presetTeam = null) {
+  if (isInPersonOnlyProject) {
+    return;
+  }
+
   const raw = document.getElementById("team-email-input").value;
   const emails = [...new Set(raw
     .split(",")
@@ -653,6 +702,10 @@ function renderDisciplines(selectedValues = []) {
 }
 
 function buildTeam() {
+  if (isInPersonOnlyProject) {
+    return [];
+  }
+
   return [...document.querySelectorAll("#team-rows .email-row")]
     .map((row) => ({
       email: row.dataset.email,
@@ -1088,7 +1141,7 @@ function validatePage1() {
     return false;
   }
 
-  if (!team.length) {
+  if (!isInPersonOnlyProject && !team.length) {
     alert("Add at least one team member with assigned discipline.");
     return false;
   }
@@ -1254,6 +1307,7 @@ async function submitForm(event) {
   const startDate = document.getElementById("project-start-date").value;
   const durationWeeks = Number(document.getElementById("project-duration").value);
   const taskDurationUnit = getTaskDurationUnit();
+  const teamMode = isInPersonOnlyProject ? "in-person" : "assigned";
   const disciplines = selectedDisciplines();
   const deliverables = getDeliverablesData();
   const projectAdminEmail = isProjectAdmin ? authSession.email : getProjectAdminEmail();
@@ -1277,6 +1331,7 @@ async function submitForm(event) {
     }
     existing.name = name;
     existing.projectType = projectType;
+    existing.teamMode = teamMode;
     existing.startDate = startDate;
     existing.durationWeeks = durationWeeks;
     existing.taskDurationUnit = taskDurationUnit;
@@ -1298,6 +1353,7 @@ async function submitForm(event) {
     boardState.projectName = name;
     boardState.stageDurationWeeks = durationWeeks;
     boardState.finishDateMs = finishDateMs;
+    boardState.teamMode = teamMode;
     const previousDurationUnit = normalizeTaskDurationUnit(boardState.taskDurationUnit);
     if (previousDurationUnit !== taskDurationUnit && Array.isArray(boardState.notes)) {
       const factor = previousDurationUnit === "week" && taskDurationUnit === "day" ? 7 : (1 / 7);
@@ -1334,6 +1390,7 @@ async function submitForm(event) {
       id: sessionStorage.getItem(PENDING_PROJECT_ID_KEY) || uid(),
       name,
       projectType,
+      teamMode,
       startDate,
       durationWeeks,
       taskDurationUnit,
@@ -1368,6 +1425,7 @@ async function submitForm(event) {
       stageDurationWeeks: imported.stageDurationWeeks,
       finishDateMs: imported.finishDateMs,
       taskDurationUnit: imported.taskDurationUnit,
+      teamMode,
       zoomX: imported.zoomX,
       zoomY: imported.zoomY,
       snapToWeek: imported.snapToWeek,
@@ -1403,6 +1461,7 @@ async function loadProjectForEdit(projectId) {
   document.querySelectorAll(".wizard-page h1")[0].textContent = "Edit Project - Step 1: Project Team";
   document.querySelectorAll(".wizard-page h1")[1].textContent = "Edit Project - Step 2: Project Details";
   document.querySelector(".primary-btn[type=submit]").textContent = "Save Changes";
+  isInPersonOnlyProject = normalizeTeamMode(project.teamMode) === "in-person";
 
   document.getElementById("project-name-input").value = project.name;
   document.getElementById("project-start-date").value = project.startDate;
@@ -1461,6 +1520,8 @@ async function loadProjectForEdit(projectId) {
   } else {
     updateDeliverableSection();
   }
+
+  updateInPersonOnlyUi();
 }
 
 // Setup event listeners
@@ -1471,6 +1532,12 @@ document.getElementById("project-type-select").addEventListener("change", () => 
   refreshTeamDisciplineOptions();
 });
 document.getElementById("team-email-input").addEventListener("input", parseAndRenderTeamEmails);
+document.getElementById("in-person-only-btn").addEventListener("click", () => {
+  toggleInPersonOnly();
+  if (!isInPersonOnlyProject) {
+    parseAndRenderTeamEmails();
+  }
+});
 document.getElementById("team-rows").addEventListener("click", (event) => {
   const target = event.target;
   if (!(target instanceof HTMLElement)) {
@@ -1540,6 +1607,7 @@ async function initializePage() {
     await loadProjectForEdit(EDIT_PROJECT_ID);
   } else {
     updateDeliverableSection();
+    updateInPersonOnlyUi();
   }
 }
 

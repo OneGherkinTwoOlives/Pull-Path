@@ -61,11 +61,16 @@
                   <span>Project Team</span>
                   <span class="field-hint">Paste email addresses separated by commas</span>
                 </label>
-                <button id="invite-all-btn" class="secondary-btn" type="button">Invite All</button>
+                <div class="team-actions">
+                  <button id="in-person-only-btn" class="secondary-btn" type="button" aria-pressed="false">In-Person Only</button>
+                  <button id="invite-all-btn" class="secondary-btn" type="button">Invite All</button>
+                </div>
               </div>
+              <div id="team-email-panel">
               <textarea id="team-email-input" class="team-email-input" placeholder="alice@company.com, bob@company.com" rows="3"></textarea>
               <div id="invite-status" class="field-hint" aria-live="polite"></div>
               <div id="team-rows" class="team-rows"></div>
+              </div>
             </section>
 
             <label class="field">
