@@ -393,6 +393,16 @@ function projectTypeDisciplines(projectType = getSelectedProjectType()) {
   return [...(PROJECT_TYPE_DISCIPLINES[normalizeProjectType(projectType)] || [])];
 }
 
+function projectTypeDisciplineLegend(projectType = getSelectedProjectType()) {
+  if (projectType === "entitlements") {
+    return "Select Departments";
+  }
+  if (projectType === "construction-trades") {
+    return "Select Trades";
+  }
+  return "Select Disciplines";
+}
+
 function availableDisciplines() {
   const projectType = getSelectedProjectType();
   if (!projectType) {
@@ -528,11 +538,16 @@ function refreshTeamDisciplineOptions() {
 
 function renderDisciplineOptions(selectedValues = selectedDisciplines()) {
   const container = document.getElementById("discipline-list");
+  const legend = document.getElementById("discipline-legend");
   const projectType = getSelectedProjectType();
   const disciplineHint = container?.parentElement?.querySelector(".field-hint");
   const customInput = document.getElementById("custom-discipline-input");
   const customBtn = document.getElementById("add-custom-discipline-btn");
   const selectedSlugs = new Set((selectedValues || []).map((name) => slugify(name)));
+
+  if (legend) {
+    legend.textContent = projectTypeDisciplineLegend(projectType);
+  }
 
   container.innerHTML = "";
   if (!projectType) {
