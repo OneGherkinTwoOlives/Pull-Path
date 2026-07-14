@@ -9,30 +9,65 @@ if (!authSession) {
 }
 const isSuperAdmin = authSession.role === "super-admin";
 const isProjectAdmin = authSession.role === "project-admin";
-const DISCIPLINES = [
-  "Architect",
-  "Landscape",
-  "Mechanical",
-  "Electrical",
-  "Structural",
-  "Owner/Developer",
-  "Interior Design",
-  "Civil",
-  "Envelope",
-  "Energy",
-  "Geotechnical",
-  "Code",
-  "Acoustic",
-  "Commissioning",
-  "Elevator",
-  "Environmental",
-  "Rendering",
-  "Survey",
-  "Sustainability",
-  "Traffic",
-  "Waste",
-  "Wind",
-];
+const PROJECT_TYPE_DISCIPLINES = {
+  "cd-drawing-development": [
+    "Architect",
+    "Landscape",
+    "Mechanical",
+    "Electrical",
+    "Structural",
+    "Owner/Developer",
+    "Interior Design",
+    "Civil",
+    "Envelope",
+    "Energy",
+    "Geotechnical",
+    "Code",
+    "Acoustic",
+    "Commissioning",
+    "Elevator",
+    "Environmental",
+    "Rendering",
+    "Survey",
+    "Sustainability",
+    "Traffic",
+    "Waste",
+    "Wind",
+  ],
+  "construction-trades": [
+    "Division 01 - General Requirements",
+    "Division 02 - Site Construction",
+    "Division 03 - Concrete",
+    "Division 04 - Masonry",
+    "Division 05 - Metals",
+    "Division 06 - Wood and Plastics",
+    "Division 07 - Thermal and Moisture Protection",
+    "Division 08 - Doors and Windows",
+    "Division 09 - Finishes",
+    "Division 10 - Specialties",
+    "Division 11 - Equipment",
+    "Division 12 - Furnishings",
+    "Division 13 - Special Construction",
+    "Division 14 - Conveying Systems",
+    "Division 15 - Mechanical",
+    "Division 16 - Electrical",
+  ],
+  entitlements: [
+    "Planning",
+    "Engineering",
+    "Electrical Utility",
+    "Gas Utility",
+    "Telcom Utility",
+    "Environment",
+    "Regional/Metro Authority",
+    "Council",
+    "Applicant",
+    "Architect",
+    "Landscape",
+    "Survey",
+  ],
+};
+const ALL_KNOWN_DISCIPLINES = [...new Set(Object.values(PROJECT_TYPE_DISCIPLINES).flat())];
 
 function slugify(text) {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -317,8 +352,54 @@ function normalizeDisciplineName(value) {
   return String(value || "").trim().replace(/\s+/g, " ");
 }
 
+function normalizeProjectType(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  const aliasMap = {
+    commercial: "cd-drawing-development",
+    residential: "cd-drawing-development",
+    institutional: "cd-drawing-development",
+    industrial: "cd-drawing-development",
+    infrastructure: "construction-trades",
+  };
+  const mapped = aliasMap[normalized] || normalized;
+  return Object.prototype.hasOwnProperty.call(PROJECT_TYPE_DISCIPLINES, mapped) ? mapped : "";
+}
+
+function getSelectedProjectType() {
+  return normalizeProjectType(document.getElementById("project-type-select")?.value);
+}
+
+function inferProjectTypeFromDisciplines(disciplines = []) {
+  if (!Array.isArray(disciplines) || disciplines.length === 0) {
+    return "";
+  }
+
+  const disciplineSlugs = new Set(disciplines.map((name) => slugify(name)));
+  let bestType = "";
+  let bestScore = -1;
+
+  Object.entries(PROJECT_TYPE_DISCIPLINES).forEach(([type, names]) => {
+    const score = names.reduce((count, name) => count + (disciplineSlugs.has(slugify(name)) ? 1 : 0), 0);
+    if (score > bestScore) {
+      bestScore = score;
+      bestType = type;
+    }
+  });
+
+  return bestScore > 0 ? bestType : "";
+}
+
+function projectTypeDisciplines(projectType = getSelectedProjectType()) {
+  return [...(PROJECT_TYPE_DISCIPLINES[normalizeProjectType(projectType)] || [])];
+}
+
 function availableDisciplines() {
-  const names = [...DISCIPLINES];
+  const projectType = getSelectedProjectType();
+  if (!projectType) {
+    return [];
+  }
+
+  const names = projectTypeDisciplines(projectType);
   customDisciplines.forEach((name) => {
     if (!names.some((existing) => slugify(existing) === slugify(name))) {
       names.push(name);
@@ -429,6 +510,10 @@ function disciplineOptionsHtml(selectedValue = "") {
     disciplineNames.push(selectedValue);
   }
 
+  if (!disciplineNames.length) {
+    return '<option value="">Select discipline</option>';
+  }
+
   return disciplineNames
     .map((name) => `<option value="${name}" ${name === selectedValue ? "selected" : ""}>${name}</option>`)
     .join("");
@@ -443,9 +528,37 @@ function refreshTeamDisciplineOptions() {
 
 function renderDisciplineOptions(selectedValues = selectedDisciplines()) {
   const container = document.getElementById("discipline-list");
+  const projectType = getSelectedProjectType();
+  const disciplineHint = container?.parentElement?.querySelector(".field-hint");
+  const customInput = document.getElementById("custom-discipline-input");
+  const customBtn = document.getElementById("add-custom-discipline-btn");
   const selectedSlugs = new Set((selectedValues || []).map((name) => slugify(name)));
 
   container.innerHTML = "";
+  if (!projectType) {
+    if (customInput) {
+      customInput.disabled = true;
+    }
+    if (customBtn) {
+      customBtn.disabled = true;
+    }
+    if (disciplineHint) {
+      disciplineHint.textContent = "Select a project type first to load discipline options.";
+    }
+    return;
+  }
+
+  if (customInput) {
+    customInput.disabled = false;
+  }
+  if (customBtn) {
+    customBtn.disabled = false;
+  }
+
+  if (disciplineHint) {
+    disciplineHint.textContent = "Use this for vendors or disciplines not listed above.";
+  }
+
   availableDisciplines().forEach((name, index) => {
     const id = `disc-${index}-${slugify(name)}`;
     const label = document.createElement("label");
@@ -494,6 +607,11 @@ function parseAndRenderTeamEmails(presetTeam = null) {
 function addCustomDisciplineFromInput() {
   const input = document.getElementById("custom-discipline-input");
   if (!input) {
+    return;
+  }
+
+  if (!getSelectedProjectType()) {
+    alert("Select a project type before adding custom disciplines.");
     return;
   }
 
@@ -930,6 +1048,7 @@ function goToPage(pageNum) {
 
 function validatePage1() {
   const name = document.getElementById("project-name-input").value.trim();
+  const projectType = getSelectedProjectType();
   const disciplines = selectedDisciplines();
   const team = buildTeam();
   const projectAdminEmail = getProjectAdminEmail();
@@ -941,6 +1060,11 @@ function validatePage1() {
 
   if (!projectAdminEmail || !isValidEmail(projectAdminEmail)) {
     alert("Enter a valid project admin email.");
+    return false;
+  }
+
+  if (!projectType) {
+    alert("Select a project type.");
     return false;
   }
 
@@ -1111,6 +1235,7 @@ async function submitForm(event) {
 
   try {
   const name = document.getElementById("project-name-input").value.trim();
+  const projectType = getSelectedProjectType();
   const startDate = document.getElementById("project-start-date").value;
   const durationWeeks = Number(document.getElementById("project-duration").value);
   const taskDurationUnit = getTaskDurationUnit();
@@ -1136,6 +1261,7 @@ async function submitForm(event) {
       return;
     }
     existing.name = name;
+    existing.projectType = projectType;
     existing.startDate = startDate;
     existing.durationWeeks = durationWeeks;
     existing.taskDurationUnit = taskDurationUnit;
@@ -1192,6 +1318,7 @@ async function submitForm(event) {
     const project = {
       id: sessionStorage.getItem(PENDING_PROJECT_ID_KEY) || uid(),
       name,
+      projectType,
       startDate,
       durationWeeks,
       taskDurationUnit,
@@ -1275,8 +1402,14 @@ async function loadProjectForEdit(projectId) {
   }
   setProjectAdminEmail(normalizeStoredProjectAdmins(project)[0] || project.createdByEmail || authSession.email);
 
+  const savedType = normalizeProjectType(project.projectType) || inferProjectTypeFromDisciplines(project.disciplines || []);
+  const typeSelect = document.getElementById("project-type-select");
+  if (typeSelect) {
+    typeSelect.value = savedType;
+  }
+
   (Array.isArray(project.disciplines) ? project.disciplines : []).forEach((discipline) => {
-    if (!DISCIPLINES.some((name) => slugify(name) === slugify(discipline))) {
+    if (!ALL_KNOWN_DISCIPLINES.some((name) => slugify(name) === slugify(discipline))) {
       ensureCustomDiscipline(discipline);
     }
   });
@@ -1318,6 +1451,10 @@ async function loadProjectForEdit(projectId) {
 // Setup event listeners
 applyRoleUi();
 renderDisciplines();
+document.getElementById("project-type-select").addEventListener("change", () => {
+  renderDisciplineOptions(selectedDisciplines());
+  refreshTeamDisciplineOptions();
+});
 document.getElementById("team-email-input").addEventListener("input", parseAndRenderTeamEmails);
 document.getElementById("team-rows").addEventListener("click", (event) => {
   const target = event.target;
