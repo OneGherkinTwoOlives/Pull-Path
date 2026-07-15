@@ -1,20 +1,19 @@
 create table if not exists public.projects (
   id text primary key,
   name text not null,
-  project_type text,
-  task_duration_unit text,
   start_date text,
   duration_weeks integer not null default 0,
   disciplines jsonb not null default '[]'::jsonb,
   team jsonb not null default '[]'::jsonb,
   project_admins jsonb not null default '[]'::jsonb,
   deliverables jsonb,
-  team_mode text,
   created_by_email text,
   imported_task_csv_name text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- Optional future project metadata can be stored in board_states.state JSONB.
 
 create table if not exists public.board_states (
   project_id text primary key references public.projects(id) on delete cascade,

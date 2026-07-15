@@ -1351,6 +1351,7 @@ async function submitForm(event) {
         : loadBoardState(EDIT_PROJECT_ID)) || {};
     } catch {}
     boardState.projectName = name;
+    boardState.projectType = projectType;
     boardState.stageDurationWeeks = durationWeeks;
     boardState.finishDateMs = finishDateMs;
     boardState.teamMode = teamMode;
@@ -1422,6 +1423,7 @@ async function submitForm(event) {
 
     await saveBoardState(project.id, {
       projectName: project.name,
+      projectType,
       stageDurationWeeks: imported.stageDurationWeeks,
       finishDateMs: imported.finishDateMs,
       taskDurationUnit: imported.taskDurationUnit,
@@ -1469,6 +1471,8 @@ async function loadProjectForEdit(projectId) {
   const savedBoardState = window.TSData?.fetchBoardState
     ? await window.TSData.fetchBoardState(projectId)
     : loadBoardState(projectId);
+  const savedProjectType = normalizeProjectType(savedBoardState?.projectType || project.projectType);
+  const savedTeamMode = normalizeTeamMode(savedBoardState?.teamMode || project.teamMode);
   const loadedTaskDurationUnit = normalizeTaskDurationUnit(savedBoardState?.taskDurationUnit || project.taskDurationUnit);
   const durationRadio = document.querySelector(`input[name="task-duration-unit"][value="${loadedTaskDurationUnit}"]`);
   if (durationRadio) {
@@ -1476,11 +1480,12 @@ async function loadProjectForEdit(projectId) {
   }
   setProjectAdminEmail(normalizeStoredProjectAdmins(project)[0] || project.createdByEmail || authSession.email);
 
-  const savedType = normalizeProjectType(project.projectType) || inferProjectTypeFromDisciplines(project.disciplines || []);
+  const savedType = savedProjectType || inferProjectTypeFromDisciplines(project.disciplines || []);
   const typeSelect = document.getElementById("project-type-select");
   if (typeSelect) {
     typeSelect.value = savedType;
   }
+  isInPersonOnlyProject = savedTeamMode === "in-person";
 
   (Array.isArray(project.disciplines) ? project.disciplines : []).forEach((discipline) => {
     if (!ALL_KNOWN_DISCIPLINES.some((name) => slugify(name) === slugify(discipline))) {
